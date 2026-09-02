@@ -319,16 +319,19 @@ export default function Landing() {
               account, and every Monday, your savings are turned into real silver for you.
             </p>
 
-            <div className="mt-9 flex flex-wrap items-center gap-3">
+            <div className="mt-9 flex flex-nowrap items-center gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() => setLoginOpen(true)}
-                className="btn-glow px-6 py-3 text-base"
+                className="btn-glow whitespace-nowrap px-4 py-2.5 text-sm sm:px-6 sm:py-3 sm:text-base"
               >
                 Login to your account
-                <IconArrowRight className="h-4 w-4" />
+                <IconArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
-              <a href="#about" className="btn-glass px-6 py-3 text-base">
+              <a
+                href="#about"
+                className="btn-glass whitespace-nowrap px-4 py-2.5 text-sm sm:px-6 sm:py-3 sm:text-base"
+              >
                 How it works
               </a>
             </div>

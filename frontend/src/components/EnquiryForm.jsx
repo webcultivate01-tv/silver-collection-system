@@ -68,7 +68,7 @@ export default function EnquiryForm() {
     // what the white details panel and the white form are read against.
     <section
       id="contact"
-      className="scroll-mt-20 border-t border-silver-200 bg-silver-50 py-20 sm:py-24"
+      className="scroll-mt-20 overflow-x-hidden border-t border-silver-200 bg-silver-50 py-20 sm:py-24"
     >
       <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16">
         <Reveal direction="left">
