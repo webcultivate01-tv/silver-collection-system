@@ -1,0 +1,33 @@
+-- Adds the employee management and silver rate tables.
+--
+-- @applied-if: table employees
+
+CREATE TABLE IF NOT EXISTS employees (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(150) NOT NULL,
+  mobile VARCHAR(15) NOT NULL,
+  email VARCHAR(150) NOT NULL UNIQUE,
+  age INT NOT NULL,
+  address TEXT NOT NULL,
+  aadhaar_number VARCHAR(12) NOT NULL UNIQUE,
+  date_of_birth DATE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  must_change_password TINYINT(1) NOT NULL DEFAULT 1,
+  is_blocked TINYINT(1) NOT NULL DEFAULT 0,
+  blocked_at DATETIME DEFAULT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS silver_rates (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  rate_date DATE NOT NULL UNIQUE,
+  rate_per_gram DECIMAL(10,2) NOT NULL,
+  rate_per_kg DECIMAL(12,2) NOT NULL,
+  note VARCHAR(255) DEFAULT NULL,
+  updated_by INT DEFAULT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
