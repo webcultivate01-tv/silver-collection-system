@@ -18,6 +18,7 @@ const SilverPurchaseModel = require("../models/silverPurchaseModel");
 const { toPurchase } = require("./purchaseController");
 const { todayAsDate } = require("./silverRateController");
 const { roundRupees } = require("../utils/silverMath");
+const { parseDate } = require("../utils/requestParams");
 
 function toSettlement(row) {
   return {
@@ -104,13 +105,10 @@ async function listMySettlements(req, res) {
 //        (admin + sub-admin, read-only)
 async function listSettlements(req, res) {
   try {
-    const asDate = (value) =>
-      String(value || "").match(/^\d{4}-\d{2}-\d{2}$/) ? String(value) : "";
-
     const status = ["pending", "accepted"].includes(req.query.status) ? req.query.status : "all";
-    const date = asDate(req.query.date);
-    const from = asDate(req.query.from);
-    const to = asDate(req.query.to);
+    const date = parseDate(req.query.date);
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
     const employeeId = Number(req.query.employeeId) || null;
     const settlements = await CashSettlementModel.listAll({ status, date, from, to, employeeId });
 

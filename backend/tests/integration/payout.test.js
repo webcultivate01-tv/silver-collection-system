@@ -282,6 +282,92 @@ describe("step 5 - the payment", () => {
   });
 });
 
+// The bill is printed once when the coin is handed over and then wanted again
+// months later - the customer has lost their copy, or the accountant is filing
+// the return. A reprint must be the SAME invoice: same number, same date, same
+// figures. If it came back different, the shop would have two tax invoices for
+// one sale.
+describe("the bill can be printed again from the history", () => {
+  async function payCoin(grams = 4) {
+    await buy(1050); // 10 g
+    const report = (await generateReport({ userId: cast.userA.id, grams })).body.report;
+
+    return payOut({
+      userId: cast.userA.id,
+      grams,
+      ratePerGram: report.rate.ratePerGram,
+      reference: report.reference,
+    });
+  }
+
+  it("returns the same bill the payout printed", async () => {
+    const paid = await payCoin(4);
+    const saleId = paid.body.payout.id;
+
+    const res = await api().get(`/api/sales/${saleId}/bill`).set(asAdmin());
+
+    expect(res.status).toBe(200);
+    expect(res.body.report.billNo).toBe(paid.body.report.billNo);
+    expect(res.body.report.payout.gramsLabel).toBe(paid.body.report.payout.gramsLabel);
+    expect(res.body.report.payout.amountPayable).toBe(400);
+    expect(res.body.report.tax).toEqual(paid.body.report.tax);
+    expect(res.body.report.customer.name).toBe(paid.body.report.customer.name);
+  });
+
+  it("bills the figures recorded on the day, not today's rate", async () => {
+    const paid = await payCoin(4); // 4 g at ₹100 = ₹400
+
+    await publishRate({ buy: 400, sell: 380, updatedBy: cast.admin.id });
+
+    const res = await api()
+      .get(`/api/sales/${paid.body.payout.id}/bill`)
+      .set(asAdmin());
+
+    expect(res.body.report.payout.ratePerGram).toBe(100);
+    expect(res.body.report.payout.amountPayable).toBe(400);
+    expect(res.body.report.tax.taxableAmount).toBe(400);
+  });
+
+  it("writes nothing", async () => {
+    const paid = await payCoin(4);
+    const before = await countRows("silver_sales");
+
+    await api().get(`/api/sales/${paid.body.payout.id}/bill`).set(asAdmin());
+
+    expect(await countRows("silver_sales")).toBe(before);
+  });
+
+  it("lets a sub-admin reprint it - it is a read, like every other report", async () => {
+    const paid = await payCoin(4);
+
+    const res = await api()
+      .get(`/api/sales/${paid.body.payout.id}/bill`)
+      .set({ Authorization: `Bearer ${cast.subAdmin.token}` });
+
+    expect(res.status).toBe(200);
+    expect(res.body.report.billNo).toBe(paid.body.report.billNo);
+  });
+
+  it("has no bill for a cash sell-back at the counter", async () => {
+    await buy(1050);
+    const sale = await api()
+      .post("/api/sales")
+      .set(asEmployee())
+      .send({ userId: cast.userA.id, grams: 4 });
+
+    const res = await api().get(`/api/sales/${sale.body.sale.id}/bill`).set(asAdmin());
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(/cash sell-back/i);
+  });
+
+  it("404s a payout that does not exist", async () => {
+    const res = await api().get("/api/sales/999999/bill").set(asAdmin());
+
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("the reference makes a repeat safe", () => {
   it("returns the first payout instead of making a second", async () => {
     await buy(1050);

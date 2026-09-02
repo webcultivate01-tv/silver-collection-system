@@ -6,6 +6,7 @@
 // customer's balance can never drift with the rate.
 
 const { pool } = require("../config/db");
+const { rowLimit } = require("../utils/requestParams");
 
 // A purchase joined to the names that make it readable. The customer's name
 // comes from `users`, the counter staff's from `employees`; a LEFT JOIN keeps
@@ -101,7 +102,7 @@ const SilverPurchaseModel = {
   async listForUser(userId, { limit = 100 } = {}) {
     const [rows] = await pool.query(
       `SELECT ${PURCHASE_COLUMNS} ${PURCHASE_JOINS} WHERE p.user_id = ? ${NEWEST_FIRST} LIMIT ?`,
-      [userId, limit]
+      [userId, rowLimit(limit, 100)]
     );
     return rows;
   },
@@ -110,7 +111,7 @@ const SilverPurchaseModel = {
   async listForEmployee(employeeId, { limit = 100 } = {}) {
     const [rows] = await pool.query(
       `SELECT ${PURCHASE_COLUMNS} ${PURCHASE_JOINS} WHERE p.employee_id = ? ${NEWEST_FIRST} LIMIT ?`,
-      [employeeId, limit]
+      [employeeId, rowLimit(limit, 100)]
     );
     return rows;
   },
@@ -122,7 +123,7 @@ const SilverPurchaseModel = {
       `SELECT ${PURCHASE_COLUMNS} ${PURCHASE_JOINS}
         WHERE p.employee_id = ? AND p.settlement_id IS NULL
         ${NEWEST_FIRST} LIMIT ?`,
-      [employeeId, limit]
+      [employeeId, rowLimit(limit, 500)]
     );
     return rows;
   },
@@ -186,7 +187,7 @@ const SilverPurchaseModel = {
 
     const [rows] = await pool.query(
       `SELECT ${PURCHASE_COLUMNS} ${PURCHASE_JOINS} ${where} ${NEWEST_FIRST} LIMIT ?`,
-      [...params, limit]
+      [...params, rowLimit(limit, 200)]
     );
     return rows;
   },
@@ -260,7 +261,12 @@ const SilverPurchaseModel = {
   // the handover it was bundled into, if any.
   async listCollectionsForEmployee(employeeId, filters = {}) {
     const { where, params } = collectionWhere(employeeId, filters);
-    const limit = Math.min(Number(filters.limit) || 500, 1000);
+    // Through rowLimit rather than a Math.min of its own: the hand-rolled
+    // clamp capped the top but not the bottom and did not force a whole
+    // number, so a limit of -5 or 1.5 reached `LIMIT ?` and MySQL refused to
+    // parse it. That is the same gap utils/requestParams.js was written to
+    // close - so this uses it rather than keeping a second copy of it.
+    const limit = rowLimit(filters.limit, 500);
 
     const [rows] = await pool.query(
       `SELECT ${COLLECTION_COLUMNS} ${COLLECTION_JOINS} ${where} ${NEWEST_FIRST} LIMIT ?`,
@@ -383,9 +389,14 @@ const SilverPurchaseModel = {
     const conditions = ["employee_id = ?"];
     const params = [employeeId];
 
-    if (year) {
+    // Only a whole year narrows the query. Number("abc") is NaN, and mysql2
+    // writes that into the SQL as the bare word NaN, which MySQL reads as a
+    // column name it has never heard of.
+    const asYear = Math.trunc(Number(year));
+
+    if (year && Number.isFinite(asYear)) {
       conditions.push("YEAR(purchased_on) = ?");
-      params.push(Number(year));
+      params.push(asYear);
     }
 
     const [rows] = await pool.query(

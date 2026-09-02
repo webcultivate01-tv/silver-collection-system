@@ -27,6 +27,14 @@
 // built by the same code as the admin's and cannot come to say something
 // different. The server refuses a sub-admin's POST to /api/sales/:id/approve
 // regardless; this is what stops the button being offered in the first place.
+//
+// The customer's bill is on the row rather than only on the payout screen that
+// first printed it. A coin is handed over once, but its tax invoice is wanted
+// again and again - the customer loses their copy, the accountant asks for it
+// at the year end - and until this row had the button, the only way to get one
+// back was to make the payout a second time. The bill it prints is fetched
+// from the server (GET /api/sales/:id/bill), so it carries the ORIGINAL bill
+// number and the figures recorded on the day, not today's rate.
 
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -37,10 +45,12 @@ import {
   clearSaleError,
   fetchAllSales,
 } from "../store/salesSlice.js";
+import api, { apiErrorMessage } from "../api/axios.js";
 import ReportDownloadButtons from "./ReportDownloadButtons.jsx";
 import { PayoutStatusBadge } from "./PaymentStatusBadge.jsx";
 import { formatDate, formatDateTime, formatRupees } from "../utils/format.js";
-import { IconCash, IconCheck, IconClose, IconSearch } from "./Icons.jsx";
+import { openBillWindow, printSilverBill } from "../utils/silverBill.js";
+import { IconCash, IconCheck, IconClose, IconReport, IconSearch } from "./Icons.jsx";
 
 const STATUSES = [
   { value: "all", label: "All" },
@@ -103,6 +113,12 @@ export default function PayoutHistory({ employees = [], readOnly = false }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
+  // The bill is fetched per row rather than carried on every row of the list:
+  // 200 payouts would mean 200 unused invoices on screen, and the one the
+  // admin actually wants is the one they click.
+  const [billingId, setBillingId] = useState(null);
+  const [billError, setBillError] = useState("");
+
   const filters = useMemo(
     () => ({ status, source, kind, employeeId, search, from, to }),
     [status, source, kind, employeeId, search, from, to]
@@ -157,12 +173,46 @@ export default function PayoutHistory({ employees = [], readOnly = false }) {
     [all, status, source, kind, employeeId, employees, from, to]
   );
 
+  // Reprints one customer's bill.
+  //
+  // The window is opened on the click and filled in when the bill arrives, not
+  // opened after it: a window opened once an await has returned is not one the
+  // browser counts as user-initiated, and the pop-up blocker eats it.
+  async function handleBill(payout) {
+    const billWindow = openBillWindow();
+
+    if (!billWindow) {
+      setBillError("Please allow pop-ups for this site to print the bill.");
+      return;
+    }
+
+    // The window is on screen before the bill is, so it says what it is
+    // waiting for. printSilverBill clears this when the bill arrives.
+    billWindow.document.write(
+      "<p style=\"font:14px 'Segoe UI',Arial,sans-serif;padding:24px\">Preparing the bill...</p>"
+    );
+
+    setBillError("");
+    setBillingId(payout.id);
+
+    try {
+      const { data } = await api.get(`/sales/${payout.id}/bill`);
+      printSilverBill(data.report, billWindow);
+    } catch (error) {
+      billWindow.close();
+      setBillError(apiErrorMessage(error, "Could not load the bill for this payout"));
+    } finally {
+      setBillingId(null);
+    }
+  }
+
   const filtered =
     status !== "all" || source !== "all" || kind !== "all" || employeeId || search || from || to;
 
   return (
     <div className="space-y-6">
       {error && <div className="alert-error">{error}</div>}
+      {billError && <div className="alert-error">{billError}</div>}
       {approvedMessage && <div className="alert-success">{approvedMessage}</div>}
 
       {/* Money still to go out, when there is any. Kept at the top because it
@@ -353,7 +403,11 @@ export default function PayoutHistory({ employees = [], readOnly = false }) {
                   <th className="table-head text-right">Value (₹)</th>
                   <th className="table-head">Received</th>
                   <th className="table-head">Status</th>
-                  {!readOnly && <th className="table-head text-right">Action</th>}
+                  {/* Kept for the sub-admin too: they cannot approve a payout,
+                      but reprinting a bill the shop has already issued is a
+                      read, and their copy of this screen has every other
+                      download the admin's has. */}
+                  <th className="table-head text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-silver-200">
@@ -402,9 +456,23 @@ export default function PayoutHistory({ employees = [], readOnly = false }) {
                         </div>
                       )}
                     </td>
-                    {!readOnly && (
-                      <td className="table-cell text-right">
-                        {payout.payoutStatus === "pending" ? (
+                    <td className="table-cell text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Only a coin has a bill. A counter sell-back is the
+                            shop buying silver back for cash - no tax invoice
+                            was ever issued for one. */}
+                        {payout.isCoin && (
+                          <button
+                            onClick={() => handleBill(payout)}
+                            disabled={billingId === payout.id}
+                            className="btn-secondary btn-sm"
+                            type="button"
+                          >
+                            <IconReport className="h-3.5 w-3.5" />
+                            {billingId === payout.id ? "Opening..." : "Bill"}
+                          </button>
+                        )}
+                        {!readOnly && payout.payoutStatus === "pending" && (
                           <button
                             onClick={() => dispatch(approveSale({ id: payout.id, filters }))}
                             disabled={approvingId === payout.id}
@@ -413,11 +481,12 @@ export default function PayoutHistory({ employees = [], readOnly = false }) {
                             <IconCheck className="h-4 w-4" />
                             {approvingId === payout.id ? "Approving..." : "Approve payout"}
                           </button>
-                        ) : (
+                        )}
+                        {!payout.isCoin && (readOnly || payout.payoutStatus !== "pending") && (
                           <span className="text-sm text-silver-400">—</span>
                         )}
-                      </td>
-                    )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -1,19 +1,36 @@
 // All SQL for the "silver_rates" table (one row per day, two rates per row).
 
 const { pool } = require("../config/db");
+const { rowLimit } = require("../utils/requestParams");
 
 const SilverRateModel = {
   // rate_date is UNIQUE, so saving the same day twice updates that day's row.
+  //
+  // The three new values are passed a second time for the UPDATE half rather
+  // than read back with VALUES(col). MySQL deprecated that function in 8.0.20
+  // and warns on every call that it will be removed; the replacement it
+  // suggests - a row alias - is itself only understood from 8.0.19 on, so
+  // naming the values twice is what works on every server this might meet.
   async upsertForDate({ rateDate, buyRatePerGram, sellRatePerGram, updatedBy }) {
+    const updatedById = updatedBy || null;
+
     await pool.query(
       `INSERT INTO silver_rates
          (rate_date, buy_rate_per_gram, sell_rate_per_gram, updated_by)
        VALUES (?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         buy_rate_per_gram  = VALUES(buy_rate_per_gram),
-         sell_rate_per_gram = VALUES(sell_rate_per_gram),
-         updated_by         = VALUES(updated_by)`,
-      [rateDate, buyRatePerGram, sellRatePerGram, updatedBy || null]
+         buy_rate_per_gram  = ?,
+         sell_rate_per_gram = ?,
+         updated_by         = ?`,
+      [
+        rateDate,
+        buyRatePerGram,
+        sellRatePerGram,
+        updatedById,
+        buyRatePerGram,
+        sellRatePerGram,
+        updatedById,
+      ]
     );
   },
 
@@ -58,7 +75,7 @@ const SilverRateModel = {
 
     const [rows] = await pool.query(
       `SELECT * FROM silver_rates ${where} ORDER BY rate_date DESC LIMIT ?`,
-      [...params, limit]
+      [...params, rowLimit(limit, 30)]
     );
     return rows;
   },

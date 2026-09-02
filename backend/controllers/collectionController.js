@@ -18,20 +18,18 @@
 const EmployeeModel = require("../models/employeeModel");
 const SilverPurchaseModel = require("../models/silverPurchaseModel");
 const { roundGrams, roundRupees, formatGrams } = require("../utils/silverMath");
-const { parseLimit } = require("../utils/requestParams");
+const { parseDate, parseLimit } = require("../utils/requestParams");
 
 const MAX_ROWS = 500;
 
-// Only "YYYY-MM-DD" reaches the query; anything else is dropped rather than
-// passed through as a filter nobody typed.
-function asDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
-}
-
 function readFilters(query) {
   return {
-    from: asDate(query.from),
-    to: asDate(query.to),
+    // Only a real "YYYY-MM-DD" day reaches the query; anything else - the wrong
+    // shape, or a shaped date like "2026-02-30" that never happened - is
+    // dropped rather than passed through as a filter nobody typed. See
+    // utils/requestParams.js.
+    from: parseDate(query.from),
+    to: parseDate(query.to),
     status: ["pending", "success"].includes(query.status) ? query.status : "all",
     search: String(query.search || "").trim().slice(0, 80),
     limit: parseLimit(query.limit, MAX_ROWS, MAX_ROWS),
@@ -92,8 +90,10 @@ function toCollection(row) {
     clientEmail: row.customer_email,
     clientMobile: row.customer_mobile || null,
     clientImage: row.customer_image || null,
-    // Whether this client is one the employee registered themselves, or
-    // somebody else's walking up to their counter.
+    // Whether this client is one the employee registered themselves. The
+    // counter now only serves an employee's own users, so this is true for
+    // anything recorded since - it stays on the row for the older collections
+    // taken before that rule, which can still show somebody else's client.
     ownClient: Number(row.created_by_employee_id) === Number(row.employee_id),
     amountPaid: Number(row.amount_paid),
     ratePerGram: Number(row.rate_per_gram),

@@ -8,7 +8,9 @@
 //
 // The customer picker and their holding are the same ones the buy screen uses,
 // out of purchasesSlice - there is one definition of what someone holds, and
-// it is what caps this form.
+// it is what caps this form. That also means this screen inherits the same
+// limit: only the users this employee registered are listed, and the server
+// refuses a sale for anyone else's.
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -196,7 +198,9 @@ export default function EmployeeSale() {
               <div className="py-10 text-center text-sm text-silver-500">Loading customers...</div>
             ) : customers.length === 0 ? (
               <div className="py-10 text-center text-sm text-silver-500">
-                {search ? `No customer matched “${search}”` : "No customers yet"}
+                {search
+                  ? `No customer of yours matched “${search}”`
+                  : "You have not registered any users yet"}
               </div>
             ) : (
               <ul className="divide-y divide-silver-200">

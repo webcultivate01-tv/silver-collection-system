@@ -9,7 +9,9 @@
 //
 // A user registered here is an ordinary portal user: they sign in at /user with
 // the email and password the employee gives them, and purchases are recorded
-// against them at the counter as usual.
+// against them at the counter as usual - by this employee only. The counter
+// reads the same ownership rule out of utils/customerAccess.js, so an employee
+// buys and sells for exactly the users this file let them register.
 
 const bcrypt = require("bcryptjs");
 const ManagedUserModel = require("../models/managedUserModel");

@@ -260,37 +260,75 @@ describe("employee ownership of their own users", () => {
   });
 });
 
-describe("the counter does not enforce the same ownership", () => {
-  // KNOWN GAP (BUG-14). employeeUserController is strict about ownership and
-  // says so; the counter is not. Either walk-in customers are intended - in
-  // which case the two files should stop contradicting each other - or this is
-  // cross-employee exposure. Pinned here so the decision is a deliberate one.
-  it("lets employee A read employee B's customer holding and history", async () => {
+describe("the counter enforces the same ownership", () => {
+  // BUG-14, closed. The counter used to serve anyone while
+  // employeeUserController was strict, so the two files contradicted each
+  // other. Both now read one rule from utils/customerAccess.js: an employee
+  // transacts for the users they registered, and for nobody else's. These
+  // tests are what keep the counter from drifting back.
+  it("refuses employee A the holding and history of employee B's customer", async () => {
     const res = await api()
       .get(`/api/purchases/customers/${cast.userB.id}`)
       .set(as(cast.employeeA.token));
 
-    expect(res.status).toBe(200);
-    expect(res.body.customer.id).toBe(cast.userB.id);
-    expect(res.body).toHaveProperty("holding");
-    expect(res.body).toHaveProperty("purchases");
+    // 404, not 403: employee A has no business learning that id exists.
+    expect(res.status).toBe(404);
+    expect(res.body).not.toHaveProperty("holding");
   });
 
-  it("lets employee A record a purchase against employee B's customer", async () => {
+  it("refuses employee A a purchase against employee B's customer", async () => {
     const res = await api()
       .post("/api/purchases")
       .set(as(cast.employeeA.token))
       .send({ userId: cast.userB.id, amountPaid: 100 });
 
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(404);
   });
 
-  it("lists every active customer in the system to any employee", async () => {
-    const res = await api().get("/api/purchases/customers").set(as(cast.employeeA.token));
+  it("writes nothing when that purchase is refused", async () => {
+    await api()
+      .post("/api/purchases")
+      .set(as(cast.employeeA.token))
+      .send({ userId: cast.userB.id, amountPaid: 100 });
 
-    const ids = res.body.customers.map((customer) => customer.id);
-    expect(ids).toContain(cast.userA.id);
-    expect(ids).toContain(cast.userB.id);
+    const owner = await api()
+      .get(`/api/purchases/customers/${cast.userB.id}`)
+      .set(as(cast.employeeB.token));
+
+    expect(owner.status).toBe(200);
+    expect(owner.body.purchases).toEqual([]);
+    expect(owner.body.holding.totalGrams).toBe(0);
+  });
+
+  it("refuses employee A a sell-back against employee B's customer", async () => {
+    await api()
+      .post("/api/purchases")
+      .set(as(cast.employeeB.token))
+      .send({ userId: cast.userB.id, amountPaid: 1050 }); // 10 g
+
+    const res = await api()
+      .post("/api/sales")
+      .set(as(cast.employeeA.token))
+      .send({ userId: cast.userB.id, grams: 1 });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("lists an employee only the customers they registered", async () => {
+    const mine = await api().get("/api/purchases/customers").set(as(cast.employeeA.token));
+    const theirs = await api().get("/api/purchases/customers").set(as(cast.employeeB.token));
+
+    expect(mine.body.customers.map((customer) => customer.id)).toEqual([cast.userA.id]);
+    expect(theirs.body.customers.map((customer) => customer.id)).toEqual([cast.userB.id]);
+  });
+
+  it("still lets each employee serve their own customer", async () => {
+    const res = await api()
+      .post("/api/purchases")
+      .set(as(cast.employeeA.token))
+      .send({ userId: cast.userA.id, amountPaid: 100 });
+
+    expect(res.status).toBe(201);
   });
 });
 

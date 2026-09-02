@@ -10,6 +10,7 @@
 // purchase into two different handovers.
 
 const { pool } = require("../config/db");
+const { rowLimit } = require("../utils/requestParams");
 
 // Who took the cash is (role, id), not an id on its own: sub-admins accept
 // handovers too, and ids restart at 1 in each account table - so the name has
@@ -46,7 +47,7 @@ const CashSettlementModel = {
   async listForEmployee(employeeId, { limit = 200 } = {}) {
     const [rows] = await pool.query(
       `SELECT ${SETTLEMENT_COLUMNS} ${SETTLEMENT_JOINS} WHERE s.employee_id = ? ${NEWEST_FIRST} LIMIT ?`,
-      [employeeId, limit]
+      [employeeId, rowLimit(limit, 200)]
     );
     return rows;
   },
@@ -96,7 +97,7 @@ const CashSettlementModel = {
 
     const [rows] = await pool.query(
       `SELECT ${SETTLEMENT_COLUMNS} ${SETTLEMENT_JOINS} ${where} ${NEWEST_FIRST} LIMIT ?`,
-      [...params, limit]
+      [...params, rowLimit(limit, 200)]
     );
     return rows;
   },

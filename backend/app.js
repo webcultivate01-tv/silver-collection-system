@@ -57,14 +57,27 @@ function createApp() {
   app.use(cors(allowedOrigins.length ? { origin: allowedOrigins } : undefined));
   app.use(express.json({ limit: "1mb" }));
 
-  // The brand logo, shown on the public landing page. It is the one file under
-  // uploads/ that is deliberately public, so it is answered here - above the
-  // guard below, which would otherwise turn it away: the landing page has no
-  // session to authenticate with, and no row in any table owns this file.
-  app.get("/uploads/logo.png", (req, res) => {
-    res.setHeader("Cache-Control", "public, max-age=86400");
-    res.sendFile(path.join(__dirname, "uploads", "logo.png"));
-  });
+  // Brand artwork: the wordmark and hero backdrop the public landing page
+  // shows, and the authorised signatory's signature printed on every tax
+  // invoice. These are the only files under uploads/ that are deliberately
+  // public, so they are answered here - above the guard below, which would
+  // otherwise turn them away: the landing page has no session to authenticate
+  // with, and no row in any table owns any of them.
+  //
+  // The signature is shop stationery, not personal data: it is printed on the
+  // bill handed to every customer, so it is no more private than the bill.
+  //
+  // The list is spelled out rather than taken from the URL on purpose. Anything
+  // that reads a filename off the request and joins it onto uploads/ is one
+  // "../" away from serving the Aadhaar scans sitting in the same tree.
+  const PUBLIC_BRAND_FILES = ["logo.png", "Hero-Bg.png", "signiture.png"];
+
+  for (const filename of PUBLIC_BRAND_FILES) {
+    app.get(`/uploads/${filename}`, (req, res) => {
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.sendFile(path.join(__dirname, "uploads", filename));
+    });
+  }
 
   // Uploaded documents. NOT express.static: these are Aadhaar and PAN scans,
   // and serving them statically made the whole tree public to anyone who

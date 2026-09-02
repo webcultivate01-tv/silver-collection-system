@@ -17,12 +17,23 @@
 // Nobody can sell silver they don't hold: the check and the insert happen
 // inside one locked transaction in models/silverSaleModel.js, so two taps on
 // "Record Sale" can't spend the same gram twice.
+//
+// And nobody sells another employee's client's silver: the customer is loaded
+// through loadMyCustomer() (utils/customerAccess.js), the same ownership rule
+// the buy screen and the employee panel use. The picker on this screen is the
+// buy screen's - GET /api/purchases/customers - so it is already limited to
+// this employee's own users; this check is what makes that true of the POST
+// as well.
 
 const SilverSaleModel = require("../models/silverSaleModel");
 const SilverRateModel = require("../models/silverRateModel");
-const { UserModel } = require("../models/accounts");
 const { toRate, todayAsDate } = require("./silverRateController");
 const { loadHolding } = require("../utils/holding");
+const { loadMyCustomer } = require("../utils/customerAccess");
+const ManagedUserModel = require("../models/managedUserModel");
+// The customer's tax invoice, shared with the payout flow that first
+// printed it - see utils/bill.js.
+const { billForSale } = require("../utils/bill");
 const {
   amountForGrams,
   gramsForAmount,
@@ -30,7 +41,7 @@ const {
   roundRupees,
   formatGrams,
 } = require("../utils/silverMath");
-const { parseLimit } = require("../utils/requestParams");
+const { parseDate, parseLimit } = require("../utils/requestParams");
 
 // A single payout larger than this is a slipped finger, not a sale.
 const MAX_PAYOUT = 10000000; // ₹1,00,00,000
@@ -188,11 +199,8 @@ async function recordSale(req, res) {
       return res.status(400).json({ message: "Choose the customer this sale is for" });
     }
 
-    const customer = await UserModel.findById(userId);
-
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
+    const customer = await loadMyCustomer(req, res, userId);
+    if (!customer) return;
 
     if (!customer.is_active) {
       return res.status(403).json({
@@ -299,8 +307,8 @@ async function listAllSales(req, res) {
     const limit = parseLimit(req.query.limit, 200, MAX_ROWS);
     const search = String(req.query.search || "").trim().slice(0, 80);
     const status = ["pending", "paid"].includes(req.query.status) ? req.query.status : "all";
-    const from = String(req.query.from || "").match(/^\d{4}-\d{2}-\d{2}$/) ? req.query.from : "";
-    const to = String(req.query.to || "").match(/^\d{4}-\d{2}-\d{2}$/) ? req.query.to : "";
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
 
     const employeeId = Number(req.query.employeeId) || null;
     const source = ["admin", "counter"].includes(req.query.source) ? req.query.source : "all";
@@ -336,6 +344,53 @@ async function listAllSales(req, res) {
     });
   } catch (error) {
     console.error("listAllSales failed:", error);
+    res.status(500).json({ message: "Something went wrong on the server" });
+  }
+}
+
+// @route GET /api/sales/:id/bill  (admin and sub-admin)
+//
+// The customer's tax invoice for a payout that has already been made, so it
+// can be printed again from the payout history long after the coin was handed
+// over - the customer loses their copy, or the shop needs the invoice back for
+// its GST return, and neither of those is a reason to issue a second bill.
+//
+// It is a REPRINT, not a new bill: the bill number, the date, the weight, the
+// rate and the tax all come out of the silver_sales row exactly as they were
+// recorded, so this and the copy the customer signed are the same document.
+// Nothing here reads today's rate, and nothing here writes.
+//
+// Only a silver coin has a bill. A counter sell-back is the shop BUYING silver
+// back for cash - no tax invoice was ever issued for one, so none is invented
+// here.
+async function getSaleBill(req, res) {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: "Invalid payout" });
+    }
+
+    const sale = await SilverSaleModel.findById(id);
+
+    if (!sale) {
+      return res.status(404).json({ message: "Payout not found" });
+    }
+
+    if (sale.payout_kind !== "coin") {
+      return res.status(409).json({
+        message:
+          "This payout was a cash sell-back at the counter, so it has no silver coin bill.",
+      });
+    }
+
+    // The row carries the customer's name and mobile, but the bill's "Bill To"
+    // box also prints their address, and that lives on the user.
+    const user = await ManagedUserModel.findById(sale.user_id);
+
+    res.json({ report: billForSale(sale, user) });
+  } catch (error) {
+    console.error("getSaleBill failed:", error);
     res.status(500).json({ message: "Something went wrong on the server" });
   }
 }
@@ -388,6 +443,8 @@ module.exports = {
   listMyRecordedSales,
   getMySales,
   listAllSales,
+  // The reprintable bill for one payout.
+  getSaleBill,
   approveSale,
   // Shared with purchaseController so a sale is shaped identically wherever
   // it's shown.

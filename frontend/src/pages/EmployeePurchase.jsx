@@ -1,6 +1,10 @@
 // The counter screen: an employee picks a customer, types what they paid, and
 // the purchase is recorded.
 //
+// The picker lists only the users this employee registered themselves - the
+// server decides that, not this screen (see backend/utils/customerAccess.js),
+// and it refuses a purchase for anyone else's user the same way.
+//
 // The weight shown while typing is only a preview - the server prices the
 // purchase from the rate it has published and stores the weight to six
 // decimals. Both sides run the same arithmetic (utils/silverMath.js mirrors
@@ -167,7 +171,9 @@ export default function EmployeePurchase() {
               <div className="py-10 text-center text-sm text-silver-500">Loading customers...</div>
             ) : customers.length === 0 ? (
               <div className="py-10 text-center text-sm text-silver-500">
-                {search ? `No customer matched “${search}”` : "No customers yet"}
+                {search
+                  ? `No customer of yours matched “${search}”`
+                  : "You have not registered any users yet"}
               </div>
             ) : (
               <ul className="divide-y divide-silver-200">

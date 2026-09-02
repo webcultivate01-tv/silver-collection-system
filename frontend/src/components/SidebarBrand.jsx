@@ -8,6 +8,10 @@
 // glance, which is why it sits directly under the mark rather than off in a
 // corner.
 //
+// The block is centred in the header, so the mobile close button is pinned to
+// the right edge instead of sharing the row - otherwise it would pull the mark
+// off centre. The extra padding on small screens keeps the two from touching.
+//
 // The sidebar is white, so the mark is drawn with tone="ink": the artwork is
 // white-on-transparent and would otherwise be invisible here. See BrandLogo.jsx
 // for why it is only ever sized by height.
@@ -18,15 +22,15 @@ import { IconClose } from "./Icons.jsx";
 
 export default function SidebarBrand({ panel, onClose }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-5 h-16 border-b border-silver-200">
-      <div className="flex min-w-0 flex-col justify-center gap-1">
+    <div className="relative flex items-center justify-center px-12 lg:px-5 h-16 border-b border-silver-200">
+      <div className="flex min-w-0 flex-col items-center justify-center gap-1">
         <BrandLogo tone="ink" className="h-6" alt={BRAND_NAME} />
         <div className="text-[11px] font-medium text-silver-500">{panel}</div>
       </div>
 
       <button
         type="button"
-        className="lg:hidden shrink-0 text-silver-400 hover:text-silver-600"
+        className="lg:hidden absolute right-5 top-1/2 -translate-y-1/2 text-silver-400 hover:text-silver-600"
         onClick={onClose}
         aria-label="Close menu"
       >

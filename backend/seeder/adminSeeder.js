@@ -8,7 +8,7 @@ const { pool } = require("../config/db");
 const { AdminModel, findByEmailAnywhere } = require("../models/accounts");
 
 async function seedAdmin() {
-  const name = process.env.ADMIN_NAME || "Admin";
+  const name = process.env.ADMIN_NAME || "Tejas Mehar";
   const email = process.env.ADMIN_EMAIL || "admin@gmail.com";
   const password = process.env.ADMIN_PASSWORD || "Admin123";
 

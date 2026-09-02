@@ -2,6 +2,9 @@
 // A "pool" hands out connections as needed instead of opening a new
 // connection for every query, which is faster and safer.
 
+// Configured via DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD in .env
+// (not committed) - see .env.example for the shape.
+
 const mysql = require("mysql2/promise");
 require("dotenv").config();
 

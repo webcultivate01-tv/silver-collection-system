@@ -19,11 +19,12 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchTodayRate } from "../store/silverRateSlice.js";
 import { formatDate, formatRupees } from "../utils/format.js";
-import { BRAND_NAME, BRAND_TAGLINE, CONTACT } from "../utils/brand.js";
+import { BRAND_NAME, BRAND_TAGLINE, CONTACT, HERO_BG_URL, PHONE_HREF } from "../utils/brand.js";
 import BrandLogo from "../components/BrandLogo.jsx";
 import LandingNavbar from "../components/LandingNavbar.jsx";
 import LoginChoiceModal from "../components/LoginChoiceModal.jsx";
 import EnquiryForm from "../components/EnquiryForm.jsx";
+import Reveal from "../components/Reveal.jsx";
 import {
   IconArrowRight,
   IconCalendar,
@@ -39,10 +40,6 @@ import {
   IconTrendUp,
   IconUsers,
 } from "../components/Icons.jsx";
-
-// The phone number as typed is easy to read but not dialable; tel: wants it
-// without the spaces.
-const PHONE_HREF = `tel:${CONTACT.phone.replace(/\s/g, "")}`;
 
 // One side of the rate card: the figure, and how far it moved since the
 // previously published day. A rise is drawn in the accent and a fall in plain
@@ -178,42 +175,43 @@ function TodayRateCard() {
 
 const HIGHLIGHTS = [
   {
-    Icon: IconSilver,
-    title: "Buy silver by the rupee",
-    body: "Pay any amount you like. It converts to grams at that day's published rate and is added to your holding straight away.",
+    Icon: IconCash,
+    title: "Save by the rupee",
+    body: "Save any amount you choose, every day or according to your saving plan. Your payment is recorded in your account and converted into silver based on the applicable daily rate.",
   },
   {
-    Icon: IconCash,
-    title: "Sell back whenever you want",
-    body: "Your silver can be sold back to us at the day's buy-back rate. No lock-in period and no paperwork to chase.",
+    Icon: IconSilver,
+    title: "Get your silver every Monday",
+    body: "Your weekly savings are converted into physical silver, and every Monday you receive your silver coin as part of your savings journey.",
   },
   {
     Icon: IconUsers,
     title: "Collected at your doorstep",
-    body: "Our field employees visit you on a schedule that suits you, so a daily or monthly saving never needs a trip to the shop.",
+    body: "Our employees personally visit you to collect your savings, making it convenient to save regularly without having to visit the shop every day.",
   },
   {
     Icon: IconReport,
     title: "Every gram accounted for",
-    body: "Each purchase, sale and payment is recorded against your name and is yours to read in the customer portal at any time.",
+    body: "Every payment and silver transaction is recorded against your name. Track your savings, silver balance, and transaction history through your customer account at any time.",
   },
 ];
 
 // What the hero's "How it works" button is pointing at: the same three things
 // the About paragraphs say, pulled out so the shape of the scheme can be read
-// in about ten seconds.
+// in about ten seconds. The numbers are drawn by the list below, so the titles
+// here are written without them.
 const STEPS = [
   {
-    title: "Open your account in person",
-    body: "We verify your Aadhaar and PAN once, either at the branch or at your door. After that they are never asked for again.",
+    title: "Open your account",
+    body: "Visit us and open your Shiv Shakti Silver savings account. Our team will verify your details and create your account so your savings can be recorded in your name.",
   },
   {
-    title: "Save whatever suits you",
-    body: "Hand over any amount, daily, weekly or monthly. It becomes grams at that morning's published rate and reaches your holding the same day.",
+    title: "Save every day",
+    body: "Save any amount that suits you. Our employee collects your savings personally and records your payment in your account, keeping track of every contribution.",
   },
   {
-    title: "Sell back on any day",
-    body: "Ask, and we buy the silver back at that day's buy-back rate. No notice period, no minimum holding, nothing to negotiate.",
+    title: "Receive your silver every Monday",
+    body: "Your accumulated savings are converted into silver according to the applicable rate, and every Monday you receive your silver coin. Your complete savings and silver records remain available in your account.",
   },
 ];
 
@@ -221,16 +219,6 @@ const TRUST = [
   { Icon: IconShield, label: "Verified accounts", detail: "Aadhaar and PAN on record" },
   { Icon: IconCalendar, label: "One rate a day", detail: "Published, not negotiated" },
   { Icon: IconClock, label: "Same-day entries", detail: "Recorded as they happen" },
-];
-
-// The four ways to reach the branch. The first two can be acted on, so they
-// render as links and carry the accent; the last two are information and stay
-// in plain silver.
-const CONTACT_CARDS = [
-  { Icon: IconPhone, label: "Phone", href: PHONE_HREF, lines: [CONTACT.phone] },
-  { Icon: IconMail, label: "Email", href: `mailto:${CONTACT.email}`, lines: [CONTACT.email] },
-  { Icon: IconPin, label: "Branch", href: null, lines: CONTACT.address },
-  { Icon: IconClock, label: "Open", href: null, lines: [CONTACT.hours] },
 ];
 
 // The eyebrow above every section heading below the hero.
@@ -260,67 +248,75 @@ export default function Landing() {
       {/* ---------------------------------------------------------- Hero */}
       <section
         id="home"
-        className="relative scroll-mt-20 overflow-hidden bg-white pb-24 pt-32 sm:pb-32 sm:pt-40"
+        className="relative scroll-mt-20 overflow-hidden bg-white pb-16 pt-24 sm:pb-20 sm:pt-28"
       >
-        {/* Layered backdrop, decorative only: a silver wash, a dot grid that
-            fades out before it reaches the copy, and two soft blooms. */}
-        <div
+        {/* The backdrop is a photograph now, so the painted layers that used
+            to stand in for one - a silver wash, a dot grid, two blurred blooms
+            - are gone. Stacked over brushed metal they read as dirt on the
+            lens rather than texture, and the plate already supplies both.
+
+            What is left is the plate and the two scrims that make it safe to
+            set type on. The plate is bright and near-white through the middle
+            and left, which is where the copy sits; the bullion, the coins and
+            the vault door are all in the right third, which is why the wash
+            below thins out in that direction instead of being even. */}
+        <img
+          src={HERO_BG_URL}
+          alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-silver-100 via-silver-50 to-white"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-60"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 1px 1px, rgb(148 163 184 / 0.4) 1px, transparent 0)",
-            backgroundSize: "28px 28px",
-            maskImage: "radial-gradient(ellipse 75% 55% at 50% 0%, #000 35%, transparent 100%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 75% 55% at 50% 0%, #000 35%, transparent 100%)",
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-32 -top-24 h-[30rem] w-[30rem] rounded-full bg-brand-200/25 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-40 -left-32 h-[30rem] w-[30rem] rounded-full bg-silver-300/40 blur-3xl"
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-[50%_62%]"
         />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
-          <div>
-            {/* The mark opens the page. It is the one piece of the brand that
-                is genuinely ours - hand-drawn, and the only ornament anywhere
-                on a deliberately plain page - so it is given the top of the
-                hero at a size the navbar cannot. The tagline sits under it as
-                a rule-and-caption rather than a second pill: the mark is
-                already the ornament, and a badge around it would be a frame
-                around a frame. */}
-            <BrandLogo alt={`${BRAND_NAME} logo`} className="h-14 sm:h-16" />
+        {/* Heaviest under the headline, thinnest over the artwork. Below lg
+            the copy runs the full width of the section, so the right-hand end
+            has to stay milky enough to read on; from lg the two-column grid
+            keeps the text clear of the metal and the scrim can open up. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white via-white/85 to-white/55 lg:via-white/70 lg:to-white/10"
+        />
 
-            <span className="mt-4 flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-silver-500">
+        {/* The About section below is flat white with a hairline top border.
+            Without this the photograph would stop dead against it. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-white"
+        />
+
+        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+          <Reveal>
+            {/* The tagline opens the page as a rule-and-caption rather than a
+                pill - the headline underneath is what should carry the weight
+                here, so nothing above it competes. */}
+            <span className="flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-silver-500">
               <span aria-hidden="true" className="h-px w-6 bg-silver-300" />
               {BRAND_TAGLINE}
             </span>
 
-            {/* "silver" is drawn as brushed metal - light, dark, light - the
-                one place on the page where a gradient earns its keep. */}
-            <h1 className="mt-6 text-[2.6rem] font-bold leading-[1.05] tracking-tight text-silver-900 sm:text-6xl">
-              Save in{" "}
-              <span className="bg-gradient-to-br from-silver-400 via-silver-800 to-silver-500 bg-clip-text text-transparent">
-                silver
+            {/* "Silver" is the one word on the page set in the accent. The
+                backdrop behind it is already brushed metal, so drawing the
+                word as metal too only competed with the photograph; in the
+                brand colour it is unmistakably the thing being promised, and
+                it ties the headline to the button below it.
+
+                The headline is two lines and only two: each is its own block,
+                so the break cannot collapse, and every size below is picked so
+                that the longer of them - "Get Silver Every Monday." - still
+                fits on one line at that width. It steps DOWN at lg on purpose:
+                that is where the two-column grid starts and the left column
+                gets narrower than the full-width md one, so the type has to
+                give some back until xl widens it again. */}
+            <h1 className="mt-6 text-[clamp(1.4rem,6.2vw,2.35rem)] font-bold leading-[1.1] tracking-tight text-silver-900 sm:text-[2.5rem] lg:text-[2.25rem] xl:text-[2.7rem]">
+              <span className="block">Save Daily.</span>
+              <span className="block">
+                Get <span className="text-brand-600">Silver</span> Every Monday.
               </span>
-              ,
-              <br />
-              not in small change.
             </h1>
 
             <p className="mt-6 max-w-lg text-base leading-relaxed text-silver-600 sm:text-lg">
-              {BRAND_NAME} turns whatever you can set aside - daily, weekly or monthly - into
-              real silver at the day&apos;s published rate. Our team collects from you, records every
-              gram against your name, and buys it back whenever you ask.
+              Open your {BRAND_NAME} account and start saving a small amount every day. Our
+              employee collects your savings personally, records every payment securely in your
+              account, and every Monday, your savings are turned into real silver for you.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -350,11 +346,11 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
 
-          <div className="flex justify-center lg:justify-end">
+          <Reveal delay={150} direction="right" className="flex justify-center lg:justify-end">
             <TodayRateCard />
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -363,71 +359,78 @@ export default function Landing() {
         id="about"
         className="scroll-mt-20 border-t border-silver-200 bg-white py-20 sm:py-24"
       >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
-            <div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          {/* The heading and the prose are two columns rather than one stack,
+              which is the whole point of the rearrangement: the heading is
+              short and wants to be large, the prose is long and wants a
+              narrow measure, and stacking them forced both into the same
+              half-width column with the cards crowding in alongside. Split
+              across the full width, each gets the shape it needs and the
+              cards get a band of their own underneath. */}
+          <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-start lg:gap-16">
+            <Reveal>
               <Eyebrow>About us</Eyebrow>
               <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-silver-900 sm:text-[2.6rem]">
-                A silver savings scheme run the way a neighbourhood shop should run it.
+                A simple way to save every day and turn your savings into silver.
               </h2>
+            </Reveal>
 
-              <div className="mt-6 space-y-4 text-base leading-relaxed text-silver-600">
-                <p>
-                  Buying silver has always meant saving up a lump sum first, then walking into a
-                  shop and hoping the day&apos;s rate is kind. {BRAND_NAME} was built to remove both
-                  problems. You save what you can, when you can, and it becomes silver at the rate
-                  published that morning - the same rate for every customer, at every branch.
-                </p>
-                <p>
-                  Our employees handle the collection in person and enter it the same day. Behind
-                  them, every purchase, buy-back and cash settlement is written into one ledger, so
-                  the grams on your account and the cash in our books always agree.
-                </p>
-                <p>
-                  When you want your money back, we buy the silver back at that day&apos;s buy-back
-                  rate. There is no notice period, no minimum holding, and nothing to negotiate.
-                </p>
-              </div>
+            {/* The rule is the only thing marking this as the answer to the
+                heading rather than a second column of equal weight; on one
+                column it disappears, because stacked order already says it. */}
+            <Reveal
+              delay={150}
+              className="space-y-4 border-silver-200 text-base leading-relaxed text-silver-600 lg:border-l lg:pl-16"
+            >
+              <p>
+                {BRAND_NAME} makes silver savings simple and accessible for everyone. You open your
+                account and choose an amount that you can comfortably save each day. Our employee
+                collects your daily savings personally and records every payment in your account.
+              </p>
+              <p>
+                Every contribution is carefully tracked, so you always know how much you have saved
+                and how much silver you have accumulated. Every Monday, your savings are converted
+                into silver and you receive your silver coin.
+              </p>
+              <p>
+                We believe saving should be simple, transparent, and consistent. That&apos;s why we
+                keep your records clear, your daily collections organized, and your silver savings
+                easy to follow — helping you turn small daily savings into something real and
+                valuable.
+              </p>
+            </Reveal>
+          </div>
 
-              {/* The mark is three times as wide as it is tall, so it sits
-                  above the sentence rather than beside it - alongside, it would
-                  either be squashed or leave the text no room. */}
-              <div className="mt-8 rounded-2xl border border-silver-200 bg-silver-50 p-5">
-                <BrandLogo alt={`${BRAND_NAME} logo`} className="h-12" />
-                <p className="mt-4 text-sm leading-relaxed text-silver-600">
-                  <span className="font-semibold text-silver-900">{BRAND_NAME}</span> -{" "}
-                  {BRAND_TAGLINE}. Serving savers and their families with a plain, written record
-                  of every gram.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:content-start">
-              {HIGHLIGHTS.map(({ Icon, title, body }) => (
-                <div
-                  key={title}
-                  className="group rounded-2xl border border-silver-200 bg-white p-5 shadow-card transition-all hover:-translate-y-1 hover:border-brand-200 hover:shadow-lift"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-silver-50 text-silver-600 ring-1 ring-inset ring-silver-200 transition-colors group-hover:bg-brand-50 group-hover:text-brand-600 group-hover:ring-brand-100">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-4 text-sm font-semibold text-silver-900">{title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-silver-600">{body}</p>
-                </div>
-              ))}
-            </div>
+          {/* Four across on a full-width row instead of a 2x2 stuffed into
+              half the page. At a quarter of the grid each card is close to
+              square, so the icon, the title and three or four lines of body
+              stack the way the card was drawn to be read. */}
+          <div className="mt-14 grid gap-4 border-t border-silver-200 pt-14 sm:grid-cols-2 lg:grid-cols-4">
+            {HIGHLIGHTS.map(({ Icon, title, body }, index) => (
+              <Reveal
+                key={title}
+                delay={index * 100}
+                className="group rounded-2xl border border-silver-200 bg-white p-5 shadow-card transition-all hover:-translate-y-1 hover:border-brand-200 hover:shadow-lift"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-silver-50 text-silver-600 ring-1 ring-inset ring-silver-200 transition-colors group-hover:bg-brand-50 group-hover:text-brand-600 group-hover:ring-brand-100">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <h3 className="mt-4 text-sm font-semibold text-silver-900">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-silver-600">{body}</p>
+              </Reveal>
+            ))}
           </div>
 
           {/* The scheme in three steps. Ink panel, so About has one dark
               block to break up an otherwise white section. */}
-          <div className="mt-16 overflow-hidden rounded-3xl bg-silver-900 shadow-lift">
+          <Reveal as="div" className="mt-16 overflow-hidden rounded-3xl bg-silver-900 shadow-lift">
             <div className="border-b border-white/10 px-6 py-7 sm:px-10">
               <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-brand-300">
                 <span aria-hidden="true" className="h-px w-6 bg-brand-400/60" />
                 How it works
               </span>
               <h3 className="mt-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-                Three steps, and none of them is a form you have to chase.
+                Simple daily savings. Real silver every Monday.
               </h3>
             </div>
 
@@ -442,97 +445,41 @@ export default function Landing() {
                 </li>
               ))}
             </ol>
-          </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ------------------------------------------------------- Contact */}
-      <section
-        id="contact"
-        className="scroll-mt-20 border-t border-silver-200 bg-silver-50 py-20 sm:py-24"
-      >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="max-w-2xl">
-            <Eyebrow>Contact</Eyebrow>
-            <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-silver-900 sm:text-[2.6rem]">
-              Talk to us before you start.
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-silver-600">
-              Opening an account is done in person, so that your identity documents are verified
-              once and never asked for again. Call or write, and we will arrange for an employee to
-              visit you.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {CONTACT_CARDS.map(({ Icon, label, href, lines }) => {
-              const inner = (
-                <>
-                  <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-xl ring-1 ring-inset ${
-                      href
-                        ? "bg-brand-50 text-brand-600 ring-brand-100"
-                        : "bg-silver-50 text-silver-500 ring-silver-200"
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-silver-500">
-                    {label}
-                  </h3>
-                  <address className="mt-1 space-y-0.5 break-words text-sm font-medium not-italic leading-relaxed text-silver-900">
-                    {lines.map((line) => (
-                      <span key={line} className="block">
-                        {line}
-                      </span>
-                    ))}
-                  </address>
-                </>
-              );
-
-              const shell = "rounded-2xl border border-silver-200 bg-white p-5 shadow-card";
-
-              return href ? (
-                <a
-                  key={label}
-                  href={href}
-                  className={`${shell} transition-all hover:-translate-y-1 hover:border-brand-200 hover:shadow-lift`}
-                >
-                  {inner}
-                </a>
-              ) : (
-                <div key={label} className={shell}>
-                  {inner}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------- Enquiry */}
+      {/* Contact. The branch details and the enquiry form are one section and
+          live together in this component - see the note at the top of it. It
+          owns both the #contact and #enquiry anchors. */}
       <EnquiryForm />
 
       {/* -------------------------------------------------------- Footer */}
       <footer className="bg-silver-900 pt-16 text-silver-300">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr_1.4fr]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <Reveal as="div" className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr_1.4fr]">
             <div className="max-w-sm">
               {/* The footer is the one dark surface on the page, so this is the
-                  only place the mark is used exactly as it was painted. */}
-              <div className="flex items-center gap-3">
-                <BrandLogo tone="white" alt="" className="h-10" />
-                <span aria-hidden="true" className="h-7 w-px bg-white/15" />
-                <span className="text-base font-bold text-white">{BRAND_NAME}</span>
-              </div>
-              <p className="mt-4 text-sm leading-relaxed text-silver-400">
-                {BRAND_TAGLINE}. Every gram bought, sold and settled is written down and stays
-                readable to the person it belongs to.
+                  only place the mark is used exactly as it was painted. It
+                  stands alone here, with no name set beside it, so it is given
+                  a little more height than the navbar's copy - at h-10 with
+                  nothing to anchor it, it read as a stray graphic rather than
+                  the head of the column. */}
+              <BrandLogo tone="white" alt={`${BRAND_NAME} logo`} className="h-12" />
+              {/* The promise first, in white so it reads as the line the
+                  column is headed by, then the explanation under it in the
+                  same muted silver the other columns use. */}
+              <p className="mt-5 text-sm font-semibold leading-relaxed text-white">
+                Save a little every day. Get something real every Monday.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-silver-400">
+                {BRAND_NAME} makes daily savings simple, transparent, and meaningful — with every
+                payment recorded securely in your name.
               </p>
             </div>
 
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-silver-500">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-silver-400">
                 Company
               </h3>
               <ul className="mt-4 space-y-2.5 text-sm">
@@ -560,7 +507,7 @@ export default function Landing() {
             </div>
 
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-silver-500">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-silver-400">
                 Sign in
               </h3>
               <ul className="mt-4 space-y-2.5 text-sm">
@@ -588,7 +535,7 @@ export default function Landing() {
             {/* The branch details spelled out again. The contact section is
                 halfway up the page; the footer is where people go looking. */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-silver-500">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-silver-400">
                 Get in touch
               </h3>
               <ul className="mt-4 space-y-4 text-sm">
@@ -623,15 +570,12 @@ export default function Landing() {
                 </li>
               </ul>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="mt-12 flex flex-col gap-2 border-t border-white/10 py-6 text-xs text-silver-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-12 border-t border-white/10 py-6 text-center text-xs text-silver-500">
             <span>
               © {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.
             </span>
-            <a href={PHONE_HREF} className="transition-colors hover:text-silver-300">
-              {CONTACT.phone} · {CONTACT.email}
-            </a>
           </div>
         </div>
       </footer>

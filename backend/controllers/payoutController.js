@@ -71,6 +71,11 @@ const crypto = require("crypto");
 const ManagedUserModel = require("../models/managedUserModel");
 const SilverSaleModel = require("../models/silverSaleModel");
 const { loadHolding, loadHoldings } = require("../utils/holding");
+const { taxOnSilver } = require("../utils/gst");
+// The bill number, and the invoice itself, live in one place - shared with the
+// reprint at GET /api/sales/:id/bill, so the copy the customer signed and the
+// one printed from the history a year later are the same document.
+const { billNumberFor } = require("../utils/bill");
 const { todayAsDate } = require("./silverRateController");
 const { currentSellRate, toSale, MAX_PAYOUT, MIN_GRAMS } = require("./saleController");
 const {
@@ -191,6 +196,9 @@ function toCustomer(user) {
     name: user.name,
     email: user.email,
     mobile: user.mobile,
+    // Printed in the "Bill To" box of the tax invoice, so it is carried even
+    // though no screen in the payout flow shows it.
+    address: user.address || null,
     profileImage: user.profile_image,
     isActive: !!user.is_active,
     employeeId: user.created_by_employee_id,
@@ -293,11 +301,16 @@ function parseCoinGrams(body, ratePerGram) {
 // The report itself: had, paying out, remaining - and the rate all three are
 // read against. Built here so step 4 and step 5 return the identical shape,
 // and the receipt the admin keeps says exactly what the ledger recorded.
-function buildReport({ user, holding, rate, grams, amountPayable, reference }) {
+function buildReport({ user, holding, rate, grams, amountPayable, reference, billNo = null }) {
   const remainingGrams = roundGrams(holding.totalGrams - grams);
 
   return {
     reference,
+
+    // The tax invoice's own number. Null on a proposal: a bill number belongs
+    // to a coin that has actually been handed over, and issuing one for a quote
+    // the admin may never confirm would put gaps in the bill book.
+    billNo,
     generatedAt: new Date().toISOString(),
     payoutDate: todayAsDate(),
 
@@ -328,6 +341,11 @@ function buildReport({ user, holding, rate, grams, amountPayable, reference }) {
       amountPayable,
       kind: "coin",
     },
+
+    // The printed bill, worked out here so the paper and the ledger can never
+    // round differently. The coin's value is the taxable amount and the 3% goes
+    // on top of it - see utils/gst.js.
+    tax: taxOnSilver(amountPayable),
 
     // What stays in the account afterwards. This is the number the customer
     // cares about most, so it is computed here once and shown everywhere -
@@ -573,6 +591,7 @@ async function payOut(req, res) {
         grams,
         amountPayable,
         reference,
+        billNo: billNumberFor(sale.id),
       }),
     });
   } catch (error) {

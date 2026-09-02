@@ -63,14 +63,12 @@ export default function LandingNavbar({ onLoginClick }) {
         scrolled ? "border-silver-200 shadow-card" : "border-silver-200/60"
       }`}
     >
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        {/* The wordmark carries the name in Devanagari and the text beside it
-            carries the same name in English, so the two are one lockup rather
-            than a logo with a caption - hence the hairline between them and no
-            box around either. */}
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+        {/* The wordmark stands alone - it already carries the name in
+            Devanagari, so nothing is set beside it and no box goes around it. */}
         <a
           href="#home"
-          className="group flex items-center gap-3"
+          className="group flex items-center"
           onClick={() => setMenuOpen(false)}
           aria-label={`${BRAND_NAME} - back to top`}
         >
@@ -78,10 +76,6 @@ export default function LandingNavbar({ onLoginClick }) {
             alt=""
             className="h-9 transition-transform duration-300 group-hover:-translate-y-0.5"
           />
-          <span aria-hidden="true" className="hidden h-7 w-px bg-silver-200 sm:block" />
-          <span className="hidden text-base font-bold tracking-tight text-silver-900 sm:block">
-            {BRAND_NAME}
-          </span>
         </a>
 
         <div className="hidden items-center gap-1 md:flex">

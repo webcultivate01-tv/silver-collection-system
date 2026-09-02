@@ -9,6 +9,13 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { api, buildCast } from "../helpers/fixtures.js";
 import { resetDatabase, closePool, countRows } from "../helpers/db.js";
 
+// A few cases go straight at the models: the limit guard now lives beside the
+// SQL as well as at the request, and only a direct call can show that.
+import SilverPurchaseModel from "../../models/silverPurchaseModel.js";
+import SilverSaleModel from "../../models/silverSaleModel.js";
+import SilverRateModel from "../../models/silverRateModel.js";
+import CashSettlementModel from "../../models/cashSettlementModel.js";
+
 let cast;
 
 beforeEach(async () => {
@@ -78,6 +85,46 @@ describe("row limits", () => {
     const res = await api().get("/api/purchases?limit=2.9").set(asAdmin());
     expect(res.body.purchases).toHaveLength(2);
   });
+
+  // The guard used to live only in the controllers. `LIMIT ?` is what MySQL
+  // actually refuses, so it lives beside the SQL as well now - a model called
+  // with a limit nobody sanitised returns rows instead of throwing.
+  it("clamps a bad limit inside the models too, not just at the request", async () => {
+    for (const bad of [-5, 1.5, "abc", "10", 0, null, undefined, NaN, Infinity]) {
+      await expect(
+        SilverPurchaseModel.listAll({ limit: bad }),
+        `purchases ${bad}`
+      ).resolves.toBeInstanceOf(Array);
+      await expect(
+        SilverSaleModel.listAll({ limit: bad }),
+        `sales ${bad}`
+      ).resolves.toBeInstanceOf(Array);
+      await expect(
+        SilverRateModel.listRecent({ limit: bad }),
+        `rates ${bad}`
+      ).resolves.toBeInstanceOf(Array);
+      await expect(
+        CashSettlementModel.listAll({ limit: bad }),
+        `settlements ${bad}`
+      ).resolves.toBeInstanceOf(Array);
+      await expect(
+        SilverPurchaseModel.listCollectionsForEmployee(cast.employeeA.id, { limit: bad }),
+        `collections ${bad}`
+      ).resolves.toBeInstanceOf(Array);
+    }
+  });
+
+  // Number("abc") is NaN, and mysql2 writes a bare NaN into the SQL, which
+  // MySQL reads as a column name. The year picker only ever sends a real year,
+  // so this is the guard for everything that is not the year picker.
+  it("ignores a year filter that is not a number", async () => {
+    for (const year of ["abc", "2026 OR 1=1", {}, []]) {
+      await expect(
+        SilverPurchaseModel.monthlyCollectionsForEmployee(cast.employeeA.id, { year }),
+        String(year)
+      ).resolves.toBeInstanceOf(Array);
+    }
+  });
 });
 
 describe("path parameters", () => {
@@ -142,6 +189,49 @@ describe("query filters", () => {
     expect(res.status).toBe(200);
     expect(res.body.filters.from).toBe("");
     expect(res.body.filters.to).toBe("");
+  });
+
+  // FIXED (was BUG-21). The date guard was a shape check - /^\d{4}-\d{2}-\d{2}$/
+  // - and nothing more, so "2026-02-30" and "2026-13-45" looked like dates and
+  // went straight into the query. MySQL rejects them outright (ER_WRONG_VALUE:
+  // Incorrect DATE value), which came back as a 500 on every date-filtered
+  // screen in the panel from a query string alone. A date has to exist, not
+  // just be shaped like one.
+  it("drops a date that is shaped right but is not a real day", async () => {
+    const impossible = ["2026-02-30", "2026-13-45", "0000-00-00", "9999-99-99", "2026-04-31"];
+
+    for (const date of impossible) {
+      const res = await api().get(`/api/sales?from=${date}`).set(asAdmin());
+
+      expect(res.status, date).toBe(200);
+      expect(res.body.filters.from, date).toBe("");
+    }
+  });
+
+  it("keeps a leap day that really exists", async () => {
+    const res = await api().get("/api/sales?from=2024-02-29").set(asAdmin());
+
+    expect(res.status).toBe(200);
+    expect(res.body.filters.from).toBe("2024-02-29");
+  });
+
+  // The same guard, on every endpoint that takes a date - they each had their
+  // own copy of the shape check, which is how one gap became six.
+  it("handles an impossible date on every endpoint that filters by one", async () => {
+    const paths = [
+      "/api/sales?from=2026-02-30",
+      "/api/purchases?from=2026-02-30",
+      "/api/reports/silver-rates?from=2026-02-30",
+      "/api/silver-rate/history?from=2026-02-30",
+      "/api/settlements?date=2026-02-30",
+      "/api/settlements?from=2026-02-30&to=2026-13-01",
+      `/api/collections/employees/${cast.employeeA.id}?from=2026-02-30`,
+    ];
+
+    for (const path of paths) {
+      const res = await api().get(path).set(asAdmin());
+      expect(res.status, path).toBe(200);
+    }
   });
 
   it("treats SQL metacharacters in a search box as literal text", async () => {

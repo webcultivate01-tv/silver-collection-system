@@ -1,7 +1,9 @@
 // The purchase ledger, read by three different kinds of account - so the guard
 // is per route rather than one router-wide `router.use`:
 //
-//   employee -> the counter: pick a customer, record what they paid
+//   employee -> the counter: pick one of their own users, record what they
+//               paid. "Their own" is enforced in the controller, not here -
+//               see utils/customerAccess.js
 //   user     -> their own holding and history, and nothing else
 //   panel    -> admin and sub-admin read every purchase (GET only; the
 //               sub-admin write block in server.js keeps it that way)

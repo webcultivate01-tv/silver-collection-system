@@ -29,7 +29,8 @@
 
 import { formatDate, formatDateTime, formatRupees } from "../utils/format.js";
 import { downloadCsvReport, reportFileName } from "../utils/reportDownload.js";
-import { IconAlert, IconCheck, IconDownload, IconPrint } from "./Icons.jsx";
+import { printSilverBill } from "../utils/silverBill.js";
+import { IconAlert, IconCheck, IconDownload, IconPrint, IconReport } from "./Icons.jsx";
 
 // The report as rows, for the CSV and the printout. Built once so the file the
 // admin keeps and the card they read can never say different things.
@@ -55,6 +56,19 @@ function reportRows(report) {
     ["Value of remaining silver", `₹${formatRupees(report.after.value)}`],
     ["Cash paid", "None — settled in silver"],
   ];
+
+  // What the customer's bill says, so the internal record and the paper they
+  // took home can be lined up against each other.
+  if (report.tax) {
+    if (report.billNo) rows.push(["Bill no", report.billNo]);
+    rows.push(
+      ["HSN", report.tax.hsn],
+      ["Taxable amount", `₹${formatRupees(report.tax.taxableAmount)}`],
+      [`CGST @ ${report.tax.cgstRate}%`, `₹${formatRupees(report.tax.cgstAmount)}`],
+      [`SGST @ ${report.tax.sgstRate}%`, `₹${formatRupees(report.tax.sgstAmount)}`],
+      ["Bill total", `₹${formatRupees(report.tax.totalAmount)}`]
+    );
+  }
 
   return rows.map(([field, value]) => ({ field, value }));
 }
@@ -221,6 +235,20 @@ export default function PayoutReport({ report, paid = false, children }) {
           )}
         </h2>
         <div className="flex items-center gap-2">
+          {/* The customer's copy. It exists only once the coin has been given -
+              a tax invoice for a handover that may never happen would put a
+              gap in the bill book, so the server withholds the bill number
+              until then and this button appears with it. */}
+          {report.billNo && (
+            <button
+              onClick={() => printSilverBill(report)}
+              className="btn-primary btn-sm"
+              type="button"
+            >
+              <IconReport className="h-3.5 w-3.5" />
+              Print bill
+            </button>
+          )}
           <button onClick={handleCsv} className="btn-secondary btn-sm" type="button">
             <IconDownload className="h-3.5 w-3.5" />
             CSV
@@ -319,6 +347,40 @@ export default function PayoutReport({ report, paid = false, children }) {
           <Line label="Silver remaining in account" value={report.after.gramsLabel} strong />
           <Line label="Cash paid" value="None — settled in silver" />
         </dl>
+
+        {/* What the customer's bill charges. The rupee figures above are the
+            coin's valuation at the metal rate; this is the taxed total on the
+            paper they sign, and the two are different numbers on purpose. */}
+        {report.tax && (
+          <div className="rounded-lg border border-silver-200">
+            <div className="flex items-baseline justify-between gap-4 border-b border-silver-100 px-4 py-2.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-silver-500">
+                Tax invoice
+              </span>
+              {report.billNo && (
+                <span className="text-xs font-semibold tabular-nums text-silver-700">
+                  Bill no {report.billNo}
+                </span>
+              )}
+            </div>
+            <div className="divide-y divide-silver-100 px-4">
+              <Line label={`Taxable amount (HSN ${report.tax.hsn})`} value={`₹${formatRupees(report.tax.taxableAmount)}`} />
+              <Line
+                label={`CGST @ ${report.tax.cgstRate}%`}
+                value={`₹${formatRupees(report.tax.cgstAmount)}`}
+              />
+              <Line
+                label={`SGST @ ${report.tax.sgstRate}%`}
+                value={`₹${formatRupees(report.tax.sgstAmount)}`}
+              />
+              <Line
+                label="Total on the bill"
+                value={`₹${formatRupees(report.tax.totalAmount)}`}
+                strong
+              />
+            </div>
+          </div>
+        )}
 
         <p className="text-[11px] text-silver-400">
           Generated {formatDateTime(report.generatedAt)}

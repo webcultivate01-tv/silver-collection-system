@@ -16,16 +16,24 @@
 //
 // The customer is a row in `users`; a customer only ever reads their own
 // history.
+//
+// An employee reaches only the users they registered themselves. The picker,
+// the holding lookup and the insert all go through loadMyCustomer() (see
+// utils/customerAccess.js) - the same ownership rule the employee panel's User
+// Management enforces - so a user another employee added is not listed, not
+// readable, and cannot be bought for, whether the request comes from the UI or
+// from a hand-made API call with a guessed id.
 
 const SilverPurchaseModel = require("../models/silverPurchaseModel");
 const SilverSaleModel = require("../models/silverSaleModel");
 const SilverRateModel = require("../models/silverRateModel");
-const { UserModel } = require("../models/accounts");
+const ManagedUserModel = require("../models/managedUserModel");
 const { toRate, todayAsDate } = require("./silverRateController");
 const { toSale } = require("./saleController");
 const { loadHolding } = require("../utils/holding");
+const { loadMyCustomer } = require("../utils/customerAccess");
 const { gramsForAmount, roundGrams, roundRupees, formatGrams } = require("../utils/silverMath");
-const { parseLimit } = require("../utils/requestParams");
+const { parseDate, parseLimit } = require("../utils/requestParams");
 
 // One payment larger than this is a slipped finger on the keypad, not a sale.
 const MAX_AMOUNT = 10000000; // ₹1,00,00,000
@@ -106,12 +114,17 @@ async function getPurchaseRate(req, res) {
 }
 
 // @route GET /api/purchases/customers?search=
-// The customer picker on the counter screen. Deactivated accounts are left out
-// - a purchase can't be recorded against one anyway.
+// The customer picker on the counter screen: the users this employee
+// registered, and only those. Deactivated accounts are left out - a purchase
+// can't be recorded against one anyway.
 async function listCustomers(req, res) {
   try {
     const search = String(req.query.search || "").trim().slice(0, 80);
-    const customers = await UserModel.findAll({ search, status: "active" });
+    const customers = await ManagedUserModel.findAll({
+      employeeId: req.employee.id,
+      search,
+      status: "active",
+    });
 
     res.json({
       customers: customers.map((customer) => ({
@@ -128,14 +141,11 @@ async function listCustomers(req, res) {
 
 // @route GET /api/purchases/customers/:userId
 // One customer's holding and history, for the employee about to serve them.
+// Somebody else's user is "not found" here, exactly as it is in the panel.
 async function getCustomerHolding(req, res) {
   try {
-    const userId = Number(req.params.userId);
-    const customer = Number.isInteger(userId) ? await UserModel.findById(userId) : null;
-
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
+    const customer = await loadMyCustomer(req, res, req.params.userId);
+    if (!customer) return;
 
     const [holding, purchases, sales] = await Promise.all([
       loadHolding(customer.id),
@@ -170,11 +180,8 @@ async function recordPurchase(req, res) {
       return res.status(400).json({ message: amount.error });
     }
 
-    const customer = await UserModel.findById(userId);
-
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
+    const customer = await loadMyCustomer(req, res, userId);
+    if (!customer) return;
 
     if (!customer.is_active) {
       return res.status(403).json({
@@ -263,8 +270,8 @@ async function listAllPurchases(req, res) {
   try {
     const limit = parseLimit(req.query.limit, 200, MAX_ROWS);
     const search = String(req.query.search || "").trim().slice(0, 80);
-    const from = String(req.query.from || "").match(/^\d{4}-\d{2}-\d{2}$/) ? req.query.from : "";
-    const to = String(req.query.to || "").match(/^\d{4}-\d{2}-\d{2}$/) ? req.query.to : "";
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
 
     // The same filters go to both, so the headline figures always describe the
     // rows below them.

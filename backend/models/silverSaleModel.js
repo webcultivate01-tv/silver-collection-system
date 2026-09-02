@@ -12,6 +12,7 @@
 // sell the same gram of silver two ways.
 
 const { pool } = require("../config/db");
+const { rowLimit } = require("../utils/requestParams");
 
 const SALE_COLUMNS = `
   s.id, s.user_id, s.employee_id, s.recorded_by_admin_id, s.grams,
@@ -222,7 +223,7 @@ const SilverSaleModel = {
   async listForUser(userId, { limit = 100 } = {}) {
     const [rows] = await pool.query(
       `SELECT ${SALE_COLUMNS} ${SALE_JOINS} WHERE s.user_id = ? ${NEWEST_FIRST} LIMIT ?`,
-      [userId, limit]
+      [userId, rowLimit(limit, 100)]
     );
     return rows;
   },
@@ -231,7 +232,7 @@ const SilverSaleModel = {
   async listForEmployee(employeeId, { limit = 100 } = {}) {
     const [rows] = await pool.query(
       `SELECT ${SALE_COLUMNS} ${SALE_JOINS} WHERE s.employee_id = ? ${NEWEST_FIRST} LIMIT ?`,
-      [employeeId, limit]
+      [employeeId, rowLimit(limit, 100)]
     );
     return rows;
   },
@@ -314,7 +315,7 @@ const SilverSaleModel = {
 
     const [rows] = await pool.query(
       `SELECT ${SALE_COLUMNS} ${SALE_JOINS} ${where} ${NEWEST_FIRST} LIMIT ?`,
-      [...params, limit]
+      [...params, rowLimit(limit, 200)]
     );
     return rows;
   },

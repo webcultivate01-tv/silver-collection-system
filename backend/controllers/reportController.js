@@ -7,14 +7,9 @@
 const EmployeeModel = require("../models/employeeModel");
 const SilverRateModel = require("../models/silverRateModel");
 const { toRate, changeBetween } = require("./silverRateController");
-const { parseLimit } = require("../utils/requestParams");
+const { parseDate, parseLimit } = require("../utils/requestParams");
 
 const MAX_ROWS = 500;
-
-// A date filter is only honoured in the form the <input type="date"> sends.
-function isDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
-}
 
 // Aadhaar is sensitive, so reports only ever show the last 4 digits.
 function maskAadhaar(aadhaar) {
@@ -96,8 +91,8 @@ async function getSilverRateReport(req, res) {
   try {
     const search = String(req.query.search || "").trim().slice(0, 60);
     const limit = parseLimit(req.query.limit, 100, MAX_ROWS);
-    const from = isDate(req.query.from) ? req.query.from : "";
-    const to = isDate(req.query.to) ? req.query.to : "";
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
 
     const rows = await SilverRateModel.listRecent({ limit, search, from, to });
 
