@@ -29,7 +29,7 @@ import {
   IconShield,
 } from "../components/Icons.jsx";
 
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 10 * 1024;
 const PHOTO_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 // The same three scans the admin panel shows, keyed the way the employee's own
@@ -199,7 +199,7 @@ export default function EmployeeProfile() {
       return;
     }
     if (file.size > MAX_PHOTO_BYTES) {
-      setPickError("Your photo must be 5MB or smaller");
+      setPickError("Your photo must be 10KB or smaller");
       return;
     }
 
@@ -280,7 +280,7 @@ export default function EmployeeProfile() {
               <p className="pb-1 text-xs text-silver-500">
                 {photoUploading ? "Uploading..." : "Click the photo to change it"}
                 <br />
-                JPG, PNG or WebP · max 5MB
+                JPG, PNG or WebP · max 10KB
               </p>
             </div>
 

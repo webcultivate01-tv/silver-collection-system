@@ -7,14 +7,14 @@
 // profileController.js decides; this only checks the file is an image we accept
 // and isn't too big.
 //
-// Same rules as every other upload in the app - JPG, PNG or WebP up to 5MB -
+// Same rules as every other upload in the app - JPG, PNG or WebP up to 10KB -
 // so a photo the profile screens say they will take is a photo the server
 // actually takes.
 
 const multer = require("multer");
 const { EXTENSION_BY_MIME } = require("../utils/employeeFiles");
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 10 * 1024;
 
 const receivePhoto = multer({
   storage: multer.memoryStorage(),
@@ -35,7 +35,7 @@ function uploadProfilePhoto(req, res, next) {
 
     const message =
       err.code === "LIMIT_FILE_SIZE"
-        ? "Your photo must be 5MB or smaller"
+        ? "Your photo must be 10KB or smaller"
         : err.code === "LIMIT_UNEXPECTED_FILE"
           ? "Unexpected file upload"
           : err.message;

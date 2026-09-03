@@ -10,7 +10,7 @@ const multer = require("multer");
 const { DOCUMENTS, EXTENSION_BY_MIME } = require("../utils/employeeFiles");
 const { USER_DOCUMENTS } = require("../utils/userFiles");
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 10 * 1024;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -44,7 +44,7 @@ function handleUpload(receive) {
 
       const message =
         err.code === "LIMIT_FILE_SIZE"
-          ? "Each document must be 5MB or smaller"
+          ? "Each document must be 10KB or smaller"
           : err.code === "LIMIT_UNEXPECTED_FILE"
             ? "Unexpected file upload"
             : err.message;
