@@ -51,8 +51,9 @@ export const CONTACT = {
   // build the tel: link, so group the digits however reads best.
   phone: "+91 91481 03103",
 
-  // TODO: still placeholders - the shop has not given us either of these yet.
-  email: "hello@silvercollection.in",
+  email: "shivshaktisilver12@gmail.com",
+
+  // TODO: still a placeholder - the shop has not given us real hours yet.
   hours: "Monday - Saturday, 10:00 AM - 8:00 PM",
 
   // One array entry per line, rendered as written in the contact card and the
