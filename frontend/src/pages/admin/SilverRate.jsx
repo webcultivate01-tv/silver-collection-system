@@ -345,7 +345,7 @@ export default function SilverRate() {
                   </span>
                   <input
                     type="number"
-                    step="0.01"
+                    step="0.000001"
                     min="0.01"
                     required
                     autoFocus
@@ -365,7 +365,7 @@ export default function SilverRate() {
                   </span>
                   <input
                     type="number"
-                    step="0.01"
+                    step="0.000001"
                     min="0.01"
                     required
                     value={sellRate}

@@ -166,8 +166,8 @@ CREATE TABLE IF NOT EXISTS employees (
 CREATE TABLE IF NOT EXISTS silver_rates (
   id INT AUTO_INCREMENT PRIMARY KEY,
   rate_date DATE NOT NULL UNIQUE,
-  buy_rate_per_gram DECIMAL(10,2) NOT NULL DEFAULT 0,
-  sell_rate_per_gram DECIMAL(10,2) NOT NULL DEFAULT 0,
+  buy_rate_per_gram DECIMAL(14,6) NOT NULL DEFAULT 0,
+  sell_rate_per_gram DECIMAL(14,6) NOT NULL DEFAULT 0,
 
   -- The row in `admins` that last published a rate.
   updated_by INT DEFAULT NULL,
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS silver_purchases (
   employee_id INT DEFAULT NULL,
 
   amount_paid DECIMAL(12, 2) NOT NULL,
-  rate_per_gram DECIMAL(10, 2) NOT NULL,
+  rate_per_gram DECIMAL(14, 6) NOT NULL,
   grams DECIMAL(14, 6) NOT NULL,
   purchased_on DATE NOT NULL,
 
@@ -266,7 +266,7 @@ CREATE TABLE IF NOT EXISTS silver_sales (
 
   -- Six decimals, matching silver_purchases.grams.
   grams DECIMAL(14, 6) NOT NULL,
-  rate_per_gram DECIMAL(10, 2) NOT NULL,
+  rate_per_gram DECIMAL(14, 6) NOT NULL,
   amount_payable DECIMAL(12, 2) NOT NULL,
 
   -- What the customer actually received. 'cash' when an employee bought the

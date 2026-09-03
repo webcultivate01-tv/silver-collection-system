@@ -2,7 +2,7 @@
 // rate and the selling rate - and everyone else reads them.
 
 const SilverRateModel = require("../models/silverRateModel");
-const { roundRupees } = require("../utils/silverMath");
+const { roundRupees, roundRatePerGram } = require("../utils/silverMath");
 const { parseDate, parseLimit, parseSearch } = require("../utils/requestParams");
 
 // A year and a day of rates. The ceiling on a date-filtered history: enough
@@ -165,8 +165,8 @@ async function saveTodayRate(req, res) {
 
     await SilverRateModel.upsertForDate({
       rateDate,
-      buyRatePerGram: roundRupees(buy.value),
-      sellRatePerGram: roundRupees(sell.value),
+      buyRatePerGram: roundRatePerGram(buy.value),
+      sellRatePerGram: roundRatePerGram(sell.value),
       updatedBy: req.user.id,
     });
 

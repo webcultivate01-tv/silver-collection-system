@@ -325,7 +325,10 @@ describe("the bill can be printed again from the history", () => {
 
     expect(res.body.report.payout.ratePerGram).toBe(100);
     expect(res.body.report.payout.amountPayable).toBe(400);
-    expect(res.body.report.tax.taxableAmount).toBe(400);
+    // GST is inclusive in amountPayable (3% of ₹400 = ₹12, split ₹6/₹6), not
+    // added on top - so the taxable amount is ₹400 minus that GST, still
+    // derived from the frozen ₹400 and untouched by today's newly published rate.
+    expect(res.body.report.tax.taxableAmount).toBe(388);
   });
 
   it("writes nothing", async () => {

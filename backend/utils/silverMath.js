@@ -39,6 +39,7 @@
 const GRAM_DECIMALS = 6; // 0.000001 g = 1 microgram - what is stored
 const GRAM_DISPLAY_DECIMALS = 3; // 0.001 g = 1 milligram - what is shown
 const RUPEE_DECIMALS = 2; // 0.01 rupee = 1 paisa
+const RATE_DECIMALS = 6; // matches GRAM_DECIMALS - a rate is not money, it's a reference figure
 const MILLIGRAMS_PER_GRAM = 1000;
 
 // Rounds on the decimal string rather than by multiplying, so 1.0000005 can't
@@ -58,6 +59,14 @@ function roundGrams(grams) {
 // Rupees, at payable precision.
 function roundRupees(amount) {
   return roundTo(amount, RUPEE_DECIMALS);
+}
+
+// A published buy/sell rate, at storage precision. Unlike a rupee amount, a
+// rate never itself changes hands - it's multiplied into every purchase and
+// sale of the day, so rounding it to the paisa before storing it would throw
+// away precision before it ever reached a calculation.
+function roundRatePerGram(rate) {
+  return roundTo(rate, RATE_DECIMALS);
 }
 
 // "₹100 at ₹105/g" -> 0.952381 g
@@ -113,9 +122,11 @@ module.exports = {
   GRAM_DECIMALS,
   GRAM_DISPLAY_DECIMALS,
   RUPEE_DECIMALS,
+  RATE_DECIMALS,
   MILLIGRAMS_PER_GRAM,
   roundGrams,
   roundRupees,
+  roundRatePerGram,
   gramsForAmount,
   amountForGrams,
   gramsToMilligrams,
