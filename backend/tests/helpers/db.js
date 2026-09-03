@@ -10,6 +10,7 @@ const { pool } = require("../../config/db");
 // Everything except schema_migrations, which records what the migrator did and
 // must survive.
 const TABLES = [
+  "enquiries",
   "silver_sales",
   "silver_purchases",
   "cash_settlements",

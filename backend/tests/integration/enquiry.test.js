@@ -1,25 +1,33 @@
-// The landing page's enquiry form.
+// The landing page's enquiry form, and the panel screen that works through
+// what it collects.
 //
-// The only public write in the application: no token, no account, and it sends
-// mail. That combination is what the suite is really about - the endpoint has
-// to accept a genuine visitor while giving a script as little as possible.
+// The public half is the only public write in the application: no token, no
+// account, and it sends mail. That combination is what the first half of the
+// suite is really about - the endpoint has to accept a genuine visitor while
+// giving a script as little as possible.
 //
 // With SMTP unconfigured (which is how .env.test leaves it) the controller
 // logs what it would have sent instead of sending it, so these tests read the
 // outgoing message off that line. Testing through the real delivery path means
 // a change that quietly stopped mailing anyone would fail here rather than
 // pass.
+//
+// The second half is the panel: an enquiry is stored now as well as mailed, so
+// that a missed email is no longer a lost customer, and both panel roles work
+// it from 'new' to 'closed'. Who may do what to one is the part worth pinning
+// down - a sub-admin can work an enquiry but not delete it.
 
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 
-import { api, makeAdmin, makeSubAdmin } from "../helpers/fixtures.js";
-import { resetDatabase, closePool } from "../helpers/db.js";
+import { api, auth, makeAdmin, makeSubAdmin, buildCast } from "../helpers/fixtures.js";
+import { resetDatabase, closePool, query } from "../helpers/db.js";
 import { AdminModel } from "../../models/accounts.js";
 
 afterAll(closePool);
 
-// The suites above touch no table, so they get no resetDatabase(); the last
-// one, which is about who the mail is addressed to, does.
+// The validation suites below touch no account table, so they get no
+// resetDatabase(); the ones about who the mail is addressed to, and about the
+// panel screen, do.
 
 const VALID = {
   name: "Ramesh Patil",
@@ -72,10 +80,40 @@ describe("sending an enquiry", () => {
     expect(sent).toContain(VALID.message);
   });
 
-  it("does not echo the enquiry back, so nothing is stored to read later", async () => {
+  it("does not echo anything back to a visitor who has no session", async () => {
     const res = await submit(VALID);
 
     expect(res.body.enquiry).toBeUndefined();
+    expect(res.body.id).toBeUndefined();
+  });
+
+  it("stores it as well as mailing it, so a missed email isn't a lost customer", async () => {
+    await resetDatabase();
+    await submit(VALID);
+
+    const rows = await query("SELECT * FROM enquiries");
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].name).toBe(VALID.name);
+    expect(rows[0].email).toBe(VALID.email);
+    expect(rows[0].phone).toBe(VALID.phone);
+    expect(rows[0].message).toBe(VALID.message);
+    // Nobody has looked at it yet.
+    expect(rows[0].status).toBe("new");
+    expect(rows[0].handled_by).toBeNull();
+  });
+
+  // `emailed` is what tells the panel "this row is the only copy". With SMTP
+  // unconfigured - which is how the suite runs - nothing reaches an inbox, so
+  // it must stay 0 rather than optimistically claiming a message was sent.
+  it("does not claim a notification went out when nothing was sent", async () => {
+    await resetDatabase();
+    await makeAdmin({ email: "owner@shop.test" });
+    await submit(VALID);
+
+    const rows = await query("SELECT emailed FROM enquiries");
+
+    expect(rows[0].emailed).toBe(0);
   });
 });
 
@@ -224,5 +262,207 @@ describe("who receives it", () => {
     expect(sent).toContain("shared@shop.test");
     expect(sent).toContain("second@shop.test");
     expect(sent).not.toContain("owner@shop.test");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The panel
+// ---------------------------------------------------------------------------
+//
+// What the stored enquiry is for: a screen both panel roles work from, rather
+// than an inbox that may or may not have been read. The interesting line here
+// is the one between the two roles - a sub-admin answers enquiries, which is a
+// write, and the app's rule is otherwise "a sub-admin reads". So the exception
+// is exactly one method on exactly one path, and DELETE is not it.
+describe("the panel's enquiry screen", () => {
+  let cast;
+
+  beforeEach(async () => {
+    await resetDatabase();
+    cast = await buildCast({ withRate: false });
+    await submit(VALID);
+  });
+
+  async function onlyEnquiry(token) {
+    const res = await api().get("/api/enquiries").set("Authorization", auth(token));
+    return res.body.enquiries[0];
+  }
+
+  it("shows the admin what a visitor wrote", async () => {
+    const res = await api().get("/api/enquiries").set("Authorization", auth(cast.admin.token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.enquiries).toHaveLength(1);
+    expect(res.body.enquiries[0]).toMatchObject({
+      name: VALID.name,
+      email: VALID.email,
+      phone: VALID.phone,
+      message: VALID.message,
+      status: "new",
+      handledByName: null,
+    });
+  });
+
+  it("shows a sub-admin the same list", async () => {
+    const res = await api().get("/api/enquiries").set("Authorization", auth(cast.subAdmin.token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.enquiries).toHaveLength(1);
+  });
+
+  it("is closed to an employee, a customer and a passer-by", async () => {
+    for (const token of [cast.employeeA.token, cast.userA.token]) {
+      const res = await api().get("/api/enquiries").set("Authorization", auth(token));
+      expect(res.status).toBe(403);
+    }
+
+    expect((await api().get("/api/enquiries")).status).toBe(401);
+  });
+
+  it("counts every status, not just the ones on screen", async () => {
+    const enquiry = await onlyEnquiry(cast.admin.token);
+
+    await api()
+      .patch(`/api/enquiries/${enquiry.id}`)
+      .set("Authorization", auth(cast.admin.token))
+      .send({ status: "closed" });
+
+    const res = await api()
+      .get("/api/enquiries?status=new")
+      .set("Authorization", auth(cast.admin.token));
+
+    expect(res.body.enquiries).toHaveLength(0);
+    expect(res.body.counts).toMatchObject({ total: 1, new: 0, closed: 1 });
+  });
+
+  it("finds one by name, email, phone or what it says", async () => {
+    for (const term of ["Ramesh", "ramesh@example.com", "98765", "daily saving"]) {
+      const res = await api()
+        .get(`/api/enquiries?search=${encodeURIComponent(term)}`)
+        .set("Authorization", auth(cast.admin.token));
+
+      expect(res.body.enquiries, term).toHaveLength(1);
+    }
+  });
+
+  it("stamps who moved it, and keeps their note", async () => {
+    const enquiry = await onlyEnquiry(cast.admin.token);
+
+    const res = await api()
+      .patch(`/api/enquiries/${enquiry.id}`)
+      .set("Authorization", auth(cast.admin.token))
+      .send({ status: "in_progress", note: "Called back, visiting Tuesday." });
+
+    expect(res.status).toBe(200);
+    expect(res.body.enquiry).toMatchObject({
+      status: "in_progress",
+      adminNote: "Called back, visiting Tuesday.",
+      handledByRole: "admin",
+      handledByName: cast.admin.name,
+    });
+    expect(res.body.enquiry.handledAt).toBeTruthy();
+  });
+
+  // The status buttons on the list send a status and nothing else. If that
+  // wiped the note somebody typed on the detail panel, closing an enquiry
+  // would erase the record of what was done about it.
+  it("keeps an existing note when only the status is sent", async () => {
+    const enquiry = await onlyEnquiry(cast.admin.token);
+    const as = { Authorization: auth(cast.admin.token) };
+
+    await api().patch(`/api/enquiries/${enquiry.id}`).set(as).send({
+      status: "in_progress",
+      note: "Called back.",
+    });
+    const res = await api().patch(`/api/enquiries/${enquiry.id}`).set(as).send({ status: "closed" });
+
+    expect(res.body.enquiry.adminNote).toBe("Called back.");
+  });
+
+  it("clears the note when the box is emptied", async () => {
+    const enquiry = await onlyEnquiry(cast.admin.token);
+    const as = { Authorization: auth(cast.admin.token) };
+
+    await api().patch(`/api/enquiries/${enquiry.id}`).set(as).send({
+      status: "in_progress",
+      note: "Wrong number.",
+    });
+    const res = await api().patch(`/api/enquiries/${enquiry.id}`).set(as).send({
+      status: "closed",
+      note: "",
+    });
+
+    expect(res.body.enquiry.adminNote).toBe("");
+  });
+
+  it("refuses a status nobody defined", async () => {
+    const enquiry = await onlyEnquiry(cast.admin.token);
+
+    const res = await api()
+      .patch(`/api/enquiries/${enquiry.id}`)
+      .set("Authorization", auth(cast.admin.token))
+      .send({ status: "archived" });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("answers 404 for an enquiry that isn't there", async () => {
+    const res = await api()
+      .patch("/api/enquiries/9999")
+      .set("Authorization", auth(cast.admin.token))
+      .send({ status: "closed" });
+
+    expect(res.status).toBe(404);
+  });
+
+  // Ids restart at 1 in every account table, so admin #1 and sub-admin #1 both
+  // exist. The row has to say which of the two it was.
+  it("records the sub-admin - not an admin with the same id - as who worked it", async () => {
+    const enquiry = await onlyEnquiry(cast.subAdmin.token);
+
+    const res = await api()
+      .patch(`/api/enquiries/${enquiry.id}`)
+      .set("Authorization", auth(cast.subAdmin.token))
+      .send({ status: "closed", note: "Answered by phone." });
+
+    expect(res.status).toBe(200);
+    expect(res.body.enquiry.handledByRole).toBe("subadmin");
+    expect(res.body.enquiry.handledByName).toBe(cast.subAdmin.name);
+  });
+
+  it("lets the main admin delete one", async () => {
+    const enquiry = await onlyEnquiry(cast.admin.token);
+
+    const res = await api()
+      .delete(`/api/enquiries/${enquiry.id}`)
+      .set("Authorization", auth(cast.admin.token));
+
+    expect(res.status).toBe(200);
+    expect(await query("SELECT id FROM enquiries")).toHaveLength(0);
+  });
+
+  it("does not let a sub-admin delete one", async () => {
+    const enquiry = await onlyEnquiry(cast.subAdmin.token);
+
+    const res = await api()
+      .delete(`/api/enquiries/${enquiry.id}`)
+      .set("Authorization", auth(cast.subAdmin.token));
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/sub-admin/i);
+    expect(await query("SELECT id FROM enquiries")).toHaveLength(1);
+  });
+
+  it("does not let an employee or a customer touch one", async () => {
+    const enquiry = await onlyEnquiry(cast.admin.token);
+
+    for (const token of [cast.employeeA.token, cast.userA.token]) {
+      const res = await api()
+        .patch(`/api/enquiries/${enquiry.id}`)
+        .set("Authorization", auth(token))
+        .send({ status: "closed" });
+
+      expect(res.status).toBe(403);
+    }
   });
 });

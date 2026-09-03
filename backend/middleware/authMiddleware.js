@@ -23,18 +23,23 @@ const READ_ONLY_METHODS = ["GET", "HEAD", "OPTIONS"];
 
 // The writes a sub-admin IS allowed, listed one by one.
 //
-// A sub-admin is a reporting account with one operational job on top of it:
-// taking an employee's end-of-day cash handover, the same way the main admin
-// does. That is a write, so the blanket block below would refuse it - and
-// opening the block up to "settlements" as a whole would hand them every
-// future POST on that router as well. Each allowed write is therefore named
-// exactly, method and path, and anything not on this list is still refused.
+// A sub-admin is a reporting account with two operational jobs on top of it:
+// taking an employee's end-of-day cash handover, and answering the enquiries
+// left on the public contact form - both the same way the main admin does.
+// Those are writes, so the blanket block below would refuse them - and opening
+// the block up to "settlements" or "enquiries" as a whole would hand them
+// every future POST on those routers as well. Each allowed write is therefore
+// named exactly, method and path, and anything not on this list is still
+// refused. Note what is NOT here: DELETE on an enquiry. Closing one is working
+// it; deleting one destroys the record that it ever arrived.
 //
 // Paths are matched against req.path, which here is the full path the
 // request came in on (this runs before any router, mounted at the root).
 const SUB_ADMIN_WRITES = [
   // Accepting one employee cash handover: POST /api/settlements/12/accept
   { method: "POST", path: /^\/api\/settlements\/\d+\/accept\/?$/ },
+  // Working one enquiry: PATCH /api/enquiries/12
+  { method: "PATCH", path: /^\/api\/enquiries\/\d+\/?$/ },
 ];
 
 function isAllowedSubAdminWrite(req) {
@@ -130,6 +135,14 @@ const panelReadAccess = requirePanelRole(ROLES.ADMIN, ROLES.SUB_ADMIN);
 // in SUB_ADMIN_WRITES above, which is what gets a sub-admin's request this far.
 const panelCashAccess = requirePanelRole(ROLES.ADMIN, ROLES.SUB_ADMIN);
 
+// Working an enquiry from the contact form: both panel roles may move one
+// along and note what was done about it. Same two roles again, and named
+// separately for the same reason panelCashAccess is - this one guards a WRITE,
+// and it must stay possible to open a screen up to sub-admin READING without
+// that silently letting them change anything on it. Every path it protects is
+// also named in SUB_ADMIN_WRITES above.
+const panelEnquiryAccess = requirePanelRole(ROLES.ADMIN, ROLES.SUB_ADMIN);
+
 // The blanket rule: "a sub-admin reads and downloads", with the writes on
 // SUB_ADMIN_WRITES as the only exceptions.
 //
@@ -145,7 +158,7 @@ function blockSubAdminWrites(req, res, next) {
   if (decoded?.role === ROLES.SUB_ADMIN) {
     return res.status(403).json({
       message:
-        "Sub-admin accounts can view and download reports and accept cash handovers. This action is not permitted.",
+        "Sub-admin accounts can view and download reports, accept cash handovers and answer enquiries. This action is not permitted.",
     });
   }
 
@@ -305,6 +318,7 @@ module.exports = {
   mainAdminOnly,
   panelReadAccess,
   panelCashAccess,
+  panelEnquiryAccess,
   blockSubAdminWrites,
   employeeOnly,
   userOnly,

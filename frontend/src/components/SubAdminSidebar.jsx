@@ -17,6 +17,7 @@ import {
   IconCollection,
   IconDashboard,
   IconLogout,
+  IconMail,
   IconRate,
   IconReport,
   IconSilver,
@@ -35,8 +36,9 @@ const links = [
   { to: "/sub-admin/silver-rate", label: "Silver Rate Report", end: false, Icon: IconRate },
   { to: "/sub-admin/payouts", label: "Payout Report", end: false, Icon: IconSilver },
   { to: "/sub-admin/reports", label: "Reports", end: false, Icon: IconReport },
-  // The one screen here that does something rather than showing something,
-  // so it sits at the bottom, apart from the reports above it.
+  // The two screens here that do something rather than show something, so
+  // they sit at the bottom, apart from the reports above them.
+  { to: "/sub-admin/enquiries", label: "Enquiries", end: false, Icon: IconMail },
   { to: "/sub-admin/settlements", label: "Cash Settlements", end: false, Icon: IconCash },
 ];
 
@@ -67,9 +69,9 @@ export default function SubAdminSidebar({ open, onClose }) {
         <div className="mx-3 mt-4 flex items-start gap-2.5 rounded-lg border border-silver-200 bg-silver-50 px-3 py-2.5">
           <IconReport className="mt-0.5 h-4 w-4 shrink-0 text-silver-500" />
           <div className="leading-tight">
-            <div className="text-xs font-semibold text-silver-800">Reports & cash</div>
+            <div className="text-xs font-semibold text-silver-800">Reports, cash & enquiries</div>
             <div className="mt-0.5 text-[11px] text-silver-500">
-              Download any report, accept employee cash
+              Download any report, accept employee cash, answer enquiries
             </div>
           </div>
         </div>

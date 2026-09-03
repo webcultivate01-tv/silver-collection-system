@@ -104,7 +104,9 @@ describe("panel read access - admin and sub-admin together", () => {
   });
 
   it("opens the ledgers to both panel roles", async () => {
-    for (const path of ["/api/purchases", "/api/sales", "/api/settlements", "/api/users"]) {
+    const paths = ["/api/purchases", "/api/sales", "/api/settlements", "/api/users", "/api/enquiries"];
+
+    for (const path of paths) {
       const statuses = await statusesFor("get", path);
       expect(statuses.admin).toBe(200);
       expect(statuses.subAdmin).toBe(200);
@@ -140,6 +142,10 @@ describe("the sub-admin write block", () => {
       ["post", "/api/payouts/report", { userId: cast.userA.id, grams: 1 }],
       ["put", "/api/profile", { name: "New", email: "new@test.local" }],
       ["put", "/api/profile/change-password", { currentPassword: "a", newPassword: "b" }],
+      // A sub-admin may WORK an enquiry - PATCH is on the allowlist, the
+      // second write their account is allowed anywhere in the app - but never
+      // destroy the record that one arrived.
+      ["delete", "/api/enquiries/1", null],
     ];
 
     for (const [method, path, body] of writes) {

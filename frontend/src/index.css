@@ -118,6 +118,12 @@
     @apply badge bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20;
   }
 
+  /* Something new that nobody has looked at yet - an unopened enquiry. The
+     accent rather than amber: it is waiting, not going wrong. */
+  .badge-info {
+    @apply badge bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/20;
+  }
+
   .alert {
     @apply rounded-lg border px-4 py-3 text-sm animate-fade-in;
   }
@@ -132,6 +138,12 @@
 
   .alert-info {
     @apply alert border-brand-200 bg-brand-50 text-brand-700;
+  }
+
+  /* Not an error - nothing failed in front of the person reading it - but
+     something they need to go and fix. */
+  .alert-warning {
+    @apply alert border-amber-200 bg-amber-50 text-amber-800;
   }
 
   .table-head {

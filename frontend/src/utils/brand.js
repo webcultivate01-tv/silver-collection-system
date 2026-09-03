@@ -5,21 +5,26 @@
 // live here. This is the file to edit when any of them change - nothing else
 // hard-codes them.
 
-import { API_ORIGIN } from "../api/axios.js";
-
 export const BRAND_NAME = "Shiv Shakti Silver";
 export const BRAND_TAGLINE = "Daily silver savings, kept simple";
 
-// Served by the backend out of backend/uploads/. That directory is otherwise
-// behind an authentication guard - these two files are published deliberately,
-// see PUBLIC_BRAND_FILES in backend/app.js. Rename either one and the landing
-// page loses its artwork, so the names have to change in both places together.
-export const LOGO_URL = `${API_ORIGIN}/uploads/logo.png`;
-export const HERO_BG_URL = `${API_ORIGIN}/uploads/Hero-Bg.png`;
+// The artwork lives in frontend/public/ and so ships inside the built
+// frontend, served by whatever serves the app: no API call, no session, and
+// nothing for the backend to publish. It used to be served out of
+// backend/uploads/, which meant the landing page depended on files that are
+// gitignored and had to be copied onto the server by hand.
+//
+// Absolute rather than a bare "/logo.png": the tax invoice in silverBill.js is
+// written into an about:blank window, and an absolute URL resolves there the
+// same way it does on the page itself.
+const ASSET_ORIGIN = typeof window === "undefined" ? "" : window.location.origin;
+
+export const LOGO_URL = `${ASSET_ORIGIN}/logo.png`;
+export const HERO_BG_URL = `${ASSET_ORIGIN}/Hero-Bg.png`;
 
 // The authorised signatory's signature, printed above the signature line of
-// every tax invoice. Published alongside the two above - see PUBLIC_BRAND_FILES.
-export const SIGNATURE_URL = `${API_ORIGIN}/uploads/signiture.png`;
+// every tax invoice. Sits alongside the two above in frontend/public/.
+export const SIGNATURE_URL = `${ASSET_ORIGIN}/signiture.png`;
 
 // What the printed tax invoice puts in its header, and what it charges tax at.
 //

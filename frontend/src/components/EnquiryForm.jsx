@@ -9,9 +9,11 @@
 // once, whichever way the visitor prefers.
 //
 // The form is the only one in the application a visitor can use without an
-// account. It posts to /api/enquiries, which emails the shop; nothing is
-// stored, and there is nowhere in the panels to read enquiries back - the
-// shop's inbox is the record.
+// account. It posts to /api/enquiries, which stores the message and emails the
+// shop. Both, deliberately: the email is what makes somebody go and look, and
+// the stored row is the record, read back on the panel's Enquiries screen
+// (pages/Enquiries.jsx) and worked from New to Closed there. A missed or
+// deleted email is no longer a customer nobody ever hears from again.
 //
 // It talks to the API directly rather than through a Redux slice: no other
 // screen needs this state, and it is gone the moment the visitor navigates

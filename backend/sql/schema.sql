@@ -294,3 +294,40 @@ CREATE TABLE IF NOT EXISTS silver_sales (
   INDEX idx_sales_recorded_by_admin (recorded_by_admin_id, sold_on),
   INDEX idx_sales_status (payout_status)
 );
+
+-- Enquiries from the public landing page's contact form.
+--
+-- The one table written by somebody with no account at all. An enquiry is
+-- stored first and mailed to the admins second, so a missed or deleted email
+-- no longer means a lost customer - the panels read the row back on the
+-- Enquiries screen and work it from 'new' to 'closed'.
+--
+-- `handled_by` is (role, id), like cash_settlements.accepted_by: both panel
+-- roles work these, and an id alone doesn't say which table it came from.
+CREATE TABLE IF NOT EXISTS enquiries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(254) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  message TEXT NOT NULL,
+
+  status ENUM('new', 'in_progress', 'closed') NOT NULL DEFAULT 'new',
+
+  -- The panel's own notes. Never shown to the person who wrote in.
+  admin_note TEXT DEFAULT NULL,
+
+  handled_by INT DEFAULT NULL,
+  handled_by_role ENUM('admin', 'subadmin') DEFAULT NULL,
+  handled_at DATETIME DEFAULT NULL,
+
+  -- 0 when the notification mail could not be sent: the row is then the only
+  -- place this enquiry exists.
+  emailed TINYINT(1) NOT NULL DEFAULT 0,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_enquiries_status (status, created_at),
+  INDEX idx_enquiries_created (created_at)
+);

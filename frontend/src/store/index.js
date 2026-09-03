@@ -5,6 +5,7 @@ import adminUsersReducer from "./adminUsersSlice.js";
 import authReducer from "./authSlice.js";
 import collectionsReducer from "./collectionsSlice.js";
 import employeeAuthReducer from "./employeeAuthSlice.js";
+import enquiriesReducer from "./enquiriesSlice.js";
 import employeesReducer from "./employeesSlice.js";
 import employeeUsersReducer from "./employeeUsersSlice.js";
 import payoutsReducer from "./payoutsSlice.js";
@@ -25,6 +26,8 @@ export const store = configureStore({
     collections: collectionsReducer,
     employeeAuth: employeeAuthReducer,
     employees: employeesReducer,
+    // The public contact form's messages, worked through on the panel.
+    enquiries: enquiriesReducer,
     // The users the signed-in employee has registered.
     employeeUsers: employeeUsersReducer,
     // The admin's Silver Payout flow: employee -> user -> report -> payment.

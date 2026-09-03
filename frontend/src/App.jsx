@@ -24,6 +24,7 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Profile from "./pages/Profile.jsx";
 import CashSettlements from "./pages/CashSettlements.jsx";
+import Enquiries from "./pages/Enquiries.jsx";
 import EmployeeList from "./pages/admin/EmployeeList.jsx";
 import EmployeeRegister from "./pages/admin/EmployeeRegister.jsx";
 import EmployeeDetail from "./pages/admin/EmployeeDetail.jsx";
@@ -123,6 +124,7 @@ export default function App() {
       <Route path="/dashboard/silver-rate" element={<AdminPage><SilverRate /></AdminPage>} />
       <Route path="/dashboard/settlements" element={<AdminPage><CashSettlements /></AdminPage>} />
       <Route path="/dashboard/payouts" element={<AdminPage><AdminPayouts /></AdminPage>} />
+      <Route path="/dashboard/enquiries" element={<AdminPage><Enquiries /></AdminPage>} />
       <Route path="/dashboard/reports" element={<AdminPage><Reports /></AdminPage>} />
       <Route path="/dashboard/admins" element={<AdminPage><AdminManagement /></AdminPage>} />
       <Route path="/dashboard/profile" element={<AdminPage><Profile /></AdminPage>} />
@@ -149,12 +151,18 @@ export default function App() {
         path="/sub-admin/payouts"
         element={<SubAdminPage><SubAdminPayoutReport /></SubAdminPage>}
       />
-      {/* The same screen the admin opens at /dashboard/settlements. A
-          sub-admin can accept a handover here - the one write their account
-          is allowed anywhere in the app (authMiddleware.js). */}
+      {/* The same two screens the admin opens at /dashboard/settlements and
+          /dashboard/enquiries. Accepting a handover and working an enquiry are
+          the only two writes a sub-admin's account is allowed anywhere in the
+          app (authMiddleware.js); deleting an enquiry is not one of them, and
+          the screen only offers that button to the main admin. */}
       <Route
         path="/sub-admin/settlements"
         element={<SubAdminPage><CashSettlements /></SubAdminPage>}
+      />
+      <Route
+        path="/sub-admin/enquiries"
+        element={<SubAdminPage><Enquiries /></SubAdminPage>}
       />
 
       {/* Employee */}

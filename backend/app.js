@@ -8,8 +8,6 @@
 // The order things are mounted in matters and is unchanged from when this
 // lived in server.js - see the comments on each block.
 
-const path = require("path");
-
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -31,7 +29,7 @@ const collectionRoutes = require("./routes/collectionRoutes");
 const enquiryRoutes = require("./routes/enquiryRoutes");
 const { blockSubAdminWrites } = require("./middleware/authMiddleware");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
-const { authLimiter, enquiryLimiter, apiLimiter } = require("./middleware/rateLimitMiddleware");
+const { authLimiter, apiLimiter } = require("./middleware/rateLimitMiddleware");
 const { serveDocument } = require("./controllers/documentController");
 
 function createApp() {
@@ -57,28 +55,6 @@ function createApp() {
   app.use(cors(allowedOrigins.length ? { origin: allowedOrigins } : undefined));
   app.use(express.json({ limit: "1mb" }));
 
-  // Brand artwork: the wordmark and hero backdrop the public landing page
-  // shows, and the authorised signatory's signature printed on every tax
-  // invoice. These are the only files under uploads/ that are deliberately
-  // public, so they are answered here - above the guard below, which would
-  // otherwise turn them away: the landing page has no session to authenticate
-  // with, and no row in any table owns any of them.
-  //
-  // The signature is shop stationery, not personal data: it is printed on the
-  // bill handed to every customer, so it is no more private than the bill.
-  //
-  // The list is spelled out rather than taken from the URL on purpose. Anything
-  // that reads a filename off the request and joins it onto uploads/ is one
-  // "../" away from serving the Aadhaar scans sitting in the same tree.
-  const PUBLIC_BRAND_FILES = ["logo.png", "Hero-Bg.png", "signiture.png"];
-
-  for (const filename of PUBLIC_BRAND_FILES) {
-    app.get(`/uploads/${filename}`, (req, res) => {
-      res.setHeader("Cache-Control", "public, max-age=86400");
-      res.sendFile(path.join(__dirname, "uploads", filename));
-    });
-  }
-
   // Uploaded documents. NOT express.static: these are Aadhaar and PAN scans,
   // and serving them statically made the whole tree public to anyone who
   // guessed a path. Every request is authenticated and ownership-checked -
@@ -95,12 +71,6 @@ function createApp() {
   // an account gets a session in the first place, and resetting your own
   // password (with an OTP emailed to you) isn't system data.
   app.use("/api/auth", authLimiter, authRoutes);
-
-  // The landing page's enquiry form. Public in the same way the login page
-  // is, and mounted next to it for the same reason: it is reached with no
-  // session at all, so it has to sit above the read-only guard below. The
-  // strict limiter applies because every request here sends an email.
-  app.use("/api/enquiries", enquiryLimiter, enquiryRoutes);
 
   // "Sub-Admin = read + download only", enforced in one place for everything
   // below rather than route by route. Any non-GET request carrying a sub-admin
@@ -126,6 +96,18 @@ function createApp() {
   app.use("/api/payouts", payoutRoutes);
   app.use("/api/settlements", settlementRoutes);
   app.use("/api/collections", collectionRoutes);
+
+  // The contact form, and the panel screen for what it collects.
+  //
+  // It used to be mounted above the read-only guard, next to the login routes,
+  // because its one route was public. It sits down here now that the same
+  // router also carries the panel's writes, which the guard has to cover -
+  // PATCH is on SUB_ADMIN_WRITES so a sub-admin can work an enquiry, DELETE is
+  // not, so only the main admin can destroy one. The public POST is unaffected
+  // by the move: it arrives with no token at all, and the guard only turns
+  // away a request carrying a sub-admin's. Its strict limiter is applied
+  // inside the router, to that one route, so it doesn't throttle the panel.
+  app.use("/api/enquiries", enquiryRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

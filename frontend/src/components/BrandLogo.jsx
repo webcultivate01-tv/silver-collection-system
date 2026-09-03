@@ -1,7 +1,7 @@
 // The company mark, drawn once here and used everywhere else through this
 // component.
 //
-// The artwork in backend/uploads/logo.png is a 600x200 wordmark painted in
+// The artwork in frontend/public/logo.png is a 600x200 wordmark painted in
 // white on transparency - it was made to sit on a dark surface. Two things
 // follow from that, and every call site used to get both of them wrong:
 //
