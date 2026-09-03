@@ -209,11 +209,12 @@ export default function EnquiryForm() {
 
               <div>
                 <label htmlFor="enquiry-phone" className="label">
-                  Phone <span className="font-normal text-silver-400">(optional)</span>
+                  Phone
                 </label>
                 <input
                   id="enquiry-phone"
                   type="tel"
+                  required
                   maxLength={20}
                   value={form.phone}
                   onChange={update("phone")}

@@ -70,8 +70,8 @@ async function submitEnquiry(req, res) {
     const phone = field(req.body.phone);
     const message = typeof req.body.message === "string" ? req.body.message.trim() : "";
 
-    if (!name || !email || !message) {
-      return res.status(400).json({ message: "Name, email and message are required" });
+    if (!name || !email || !phone || !message) {
+      return res.status(400).json({ message: "Name, email, phone and message are required" });
     }
 
     if (!EMAIL_PATTERN.test(email)) {

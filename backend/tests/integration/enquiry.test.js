@@ -72,12 +72,6 @@ describe("sending an enquiry", () => {
     expect(sent).toContain(VALID.message);
   });
 
-  it("treats the phone number as optional", async () => {
-    const res = await submit({ ...VALID, phone: "" });
-
-    expect(res.status).toBe(201);
-  });
-
   it("does not echo the enquiry back, so nothing is stored to read later", async () => {
     const res = await submit(VALID);
 
@@ -86,8 +80,8 @@ describe("sending an enquiry", () => {
 });
 
 describe("what the form refuses", () => {
-  it("needs a name, an email and a message", async () => {
-    for (const missing of ["name", "email", "message"]) {
+  it("needs a name, an email, a phone number and a message", async () => {
+    for (const missing of ["name", "email", "phone", "message"]) {
       const res = await submit({ ...VALID, [missing]: "" });
 
       expect(res.status).toBe(400);
