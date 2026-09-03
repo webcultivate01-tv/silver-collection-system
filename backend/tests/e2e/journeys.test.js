@@ -829,7 +829,7 @@ describe("Journey 11 - invalid input at every form", () => {
   });
 
   it("rejects an oversized or wrongly typed upload", async () => {
-    const tooBig = Buffer.alloc(11 * 1024, 1);
+    const tooBig = Buffer.alloc(51 * 1024, 1);
     const big = await api()
       .post("/api/employee/users")
       .set(bearer(cast.employeeA.token))
@@ -837,7 +837,7 @@ describe("Journey 11 - invalid input at every form", () => {
       .attach("aadhaarFront", tooBig, "big.jpg");
 
     expect(big.status).toBe(400);
-    expect(big.body.message).toMatch(/10KB or smaller/i);
+    expect(big.body.message).toMatch(/50KB or smaller/i);
 
     const notAnImage = await api()
       .post("/api/employee/users")

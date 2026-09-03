@@ -160,7 +160,7 @@ export default function Profile() {
               <p className="pb-1 text-xs text-silver-500">
                 {uploadingImage ? "Uploading..." : "Click the photo to change it"}
                 <br />
-                JPG, PNG or WebP · max 10KB
+                JPG, PNG or WebP · max 50KB
               </p>
             </div>
 

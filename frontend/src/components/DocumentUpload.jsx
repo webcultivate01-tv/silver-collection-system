@@ -90,7 +90,7 @@ export function DocumentUpload({ label, hint, file, existingPath, error, onPick 
       {error ? (
         <p className="field-error">{error}</p>
       ) : (
-        <p className="mt-1.5 text-xs text-silver-500">{hint || "JPG, PNG or WebP · max 10KB"}</p>
+        <p className="mt-1.5 text-xs text-silver-500">{hint || "JPG, PNG or WebP · max 50KB"}</p>
       )}
     </div>
   );
@@ -160,7 +160,7 @@ export function PhotoUpload({
               ? "Leave this out if you don't have one - the user can add their own later."
               : "Click the circle to choose a photo."}
             <br />
-            JPG, PNG or WebP · max 10KB.
+            JPG, PNG or WebP · max 50KB.
           </p>
         )}
       </div>
