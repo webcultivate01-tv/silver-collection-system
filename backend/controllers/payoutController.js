@@ -343,8 +343,8 @@ function buildReport({ user, holding, rate, grams, amountPayable, reference, bil
     },
 
     // The printed bill, worked out here so the paper and the ledger can never
-    // round differently. The coin's value is the taxable amount and the 3% goes
-    // on top of it - see utils/gst.js.
+    // round differently. `amountPayable` is the total the customer pays, and
+    // the 3% GST is extracted back out of it, inclusive - see utils/gst.js.
     tax: taxOnSilver(amountPayable),
 
     // What stays in the account afterwards. This is the number the customer

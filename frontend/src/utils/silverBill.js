@@ -18,8 +18,9 @@
 // the number on it has to be the number the ledger holds - not one a browser
 // worked out again and rounded a step differently.
 //
-// The coin's value at the published rate is the TAXABLE amount, and CGST 1.5%
-// + SGST 1.5% go on top of it. A coin worth 194 bills at 200.
+// GST is inclusive: the coin's total is the fixed, round figure the customer
+// pays, and the taxable amount plus CGST 1.5% + SGST 1.5% are what the server
+// extracted back out of it.
 
 import { formatDate, formatRupees } from "./format.js";
 import { BILL, BRAND_NAME, LOGO_URL, SIGNATURE_URL } from "./brand.js";

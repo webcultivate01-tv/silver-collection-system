@@ -72,7 +72,8 @@ function billForSale(sale, user) {
       kind: "coin",
     },
 
-    // The coin's value is the taxable amount; CGST and SGST go on top of it.
+    // `amountPayable` is the total the customer paid; CGST and SGST are
+    // extracted back out of it, inclusive.
     tax: taxOnSilver(amountPayable),
   };
 }

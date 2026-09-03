@@ -7,36 +7,49 @@
 // they sign for has to be the number the server computed - not one a browser
 // re-derived and rounded a step differently.
 //
-// The coin's value at the published rate is the TAXABLE amount, and the two
-// taxes go on top of it. So a coin worth ₹194 is billed at ₹200, not ₹194 -
-// the published rate is a metal rate, not a counter price.
+// GST here is INCLUSIVE: the amount the customer pays (`totalAmount`) is the
+// fixed, round figure on the bill, and the 3% is extracted back out of it -
+// not added on top. So a ₹220 coin is billed at ₹220, and the taxable amount
+// and the two tax halves are whatever divides evenly out of that ₹220.
 //
-// The tax itself is rounded to the whole rupee, not the paisa. That is what
-// section 170 of the CGST Act asks for, and it is what makes the bill add up
-// in front of the customer with no round-off line to explain: ₹194 taxable
-// carries ₹3 and ₹3, and the total is ₹200 exactly.
-
+// Everything is worked in whole paisa, not floating rupees, so the three
+// pieces always add back up to the total to the exact paisa - there is no
+// round-off line to explain on the printed bill.
 const { roundRupees } = require("./silverMath");
 
 const SILVER_HSN = "7106";
 const CGST_RATE = 1.5;
 const SGST_RATE = 1.5;
+const GST_RATE = CGST_RATE + SGST_RATE; // 3% total, inclusive in `totalAmount`
 
-// Each half is rounded on its own, because that is how each is reported and
-// paid - not halved off a single rounded 3% figure, which can leave the two
-// halves disagreeing on the printed bill.
-function taxOnSilver(taxableAmount) {
-  const taxable = roundRupees(taxableAmount);
+function toPaisa(rupees) {
+  return Math.round(rupees * 100);
+}
 
-  if (!Number.isFinite(taxable) || taxable < 0) return null;
+// CGST and SGST are not each 1.5% of the taxable amount rounded on their own
+// - halved that way, the two can disagree by a paisa from what the total
+// minus the taxable amount actually is. Instead the total GST is taken by
+// subtraction (so it always ties out against `totalAmount`), CGST takes half
+// of it, and SGST takes whatever paisa is left over.
+function taxOnSilver(totalAmount) {
+  const total = roundRupees(totalAmount);
 
-  const cgstAmount = Math.round((taxable * CGST_RATE) / 100);
-  const sgstAmount = Math.round((taxable * SGST_RATE) / 100);
-  const gstIncludeAmount = roundRupees(taxable + cgstAmount + sgstAmount);
+  if (!Number.isFinite(total) || total < 0) return null;
+
+  const totalPaisa = toPaisa(total);
+  const taxablePaisa = Math.round(totalPaisa / (1 + GST_RATE / 100));
+  const totalGstPaisa = totalPaisa - taxablePaisa;
+  const cgstPaisa = Math.round(totalGstPaisa / 2);
+  const sgstPaisa = totalGstPaisa - cgstPaisa;
+
+  const taxableAmount = taxablePaisa / 100;
+  const cgstAmount = cgstPaisa / 100;
+  const sgstAmount = sgstPaisa / 100;
+  const gstIncludeAmount = total;
 
   return {
     hsn: SILVER_HSN,
-    taxableAmount: taxable,
+    taxableAmount,
     cgstRate: CGST_RATE,
     cgstAmount,
     sgstRate: SGST_RATE,
