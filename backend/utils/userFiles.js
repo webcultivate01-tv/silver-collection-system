@@ -133,10 +133,21 @@ async function deleteUserFolder(folderName) {
   await fsp.rm(target, { recursive: true, force: true }).catch(() => {});
 }
 
+// Deletes every user's documents belonging to one employee - the whole
+// uploads/user/<employee-folder>/ tree - so nothing is left behind on disk
+// once that employee (and the users only they could manage) is gone.
+async function deleteEmployeeUsersFolder(employeeFolder) {
+  const employee = slugify(employeeFolder);
+  if (!employee) return;
+  const target = path.join(USERS_ROOT, employee);
+  await fsp.rm(target, { recursive: true, force: true }).catch(() => {});
+}
+
 module.exports = {
   USER_DOCUMENTS,
   USERS_ROOT,
   buildUserFolder,
+  deleteEmployeeUsersFolder,
   deleteUserFolder,
   missingUserDocuments,
   saveUserDocuments,

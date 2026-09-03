@@ -15,6 +15,7 @@ const {
   renameFolder,
   saveDocuments,
 } = require("../utils/employeeFiles");
+const { deleteEmployeeUsersFolder } = require("../utils/userFiles");
 
 // Aadhaar is sensitive, so the list view only ever shows the last 4 digits.
 function maskAadhaar(aadhaar) {
@@ -260,7 +261,9 @@ async function setEmployeeBlocked(req, res) {
 }
 
 // @route DELETE /api/employees/:id
-// Removes the record and the whole document folder from disk.
+// Removes the record, the employee's own document folder, and every
+// document folder of the users this employee registered - none of that is
+// reachable once the employee is gone, so nothing should be left on disk.
 async function deleteEmployee(req, res) {
   try {
     const employee = await EmployeeModel.findById(req.params.id);
@@ -270,6 +273,7 @@ async function deleteEmployee(req, res) {
 
     await EmployeeModel.remove(employee.id);
     await deleteFolder(employee.folder_name);
+    await deleteEmployeeUsersFolder(employee.folder_name);
 
     res.json({ message: `${employee.full_name} has been deleted`, id: employee.id });
   } catch (error) {
